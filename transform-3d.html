@@ -11,6 +11,7 @@ body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-heig
 .back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
 .back-link:hover{text-decoration:underline}
 h1{margin-bottom:8px;font-size:2rem;color:#58a6ff}
+.badge{display:inline-block;background:rgba(31,111,235,.13);border:1px solid rgba(31,111,235,.4);color:#79c0ff;border-radius:6px;padding:2px 10px;font-size:.78rem;margin-left:8px;vertical-align:middle;font-weight:normal}
 .subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
 .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
 .row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
@@ -20,11 +21,12 @@ label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
 input[type=range]{width:100%;accent-color:#58a6ff}
 select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%}
 .chk{display:flex;align-items:center;gap:8px;color:#e6edf3;font-size:.9rem}
-#cv{background:#0d1117;border:1px solid #30363d;border-radius:8px;width:100%;display:block;cursor:grab;touch-action:none}
+#cv{background:#0d1117;border:1px solid #30363d;border-radius:8px;width:100%;aspect-ratio:900/560;display:block;cursor:grab;touch-action:none}
 #cv:active{cursor:grabbing}
 .hint{color:#484f58;font-size:.8rem;text-align:center;margin-top:10px}
 .matrix{display:grid;grid-template-columns:repeat(3,84px);gap:6px;font-family:monospace}
 .m-cell{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:8px;text-align:center;color:#7ee787;font-size:.85rem}
+.gl-fail{color:#f85149;text-align:center;padding:40px 0;line-height:1.8}
 .footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
 @media(max-width:600px){body{padding:20px}}
 </style>
@@ -32,8 +34,8 @@ select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10p
 <body>
 <div class="container">
 <a class="back-link" href="index.html">← 返回工具集</a>
-<h1>🧊 三维变换可视化</h1>
-<p class="subtitle">绕 X / Y / Z 轴旋转、透视投影、平移缩放 —— 在浏览器里直接拖拽观察</p>
+<h1>🧊 三维变换可视化<span class="badge">WebGL 硬件渲染</span></h1>
+<p class="subtitle">GPU 光栅化 + 深度缓冲 + 硬件背面剔除 —— 任何角度都不会再丢失面</p>
 
 <div class="card">
 <div class="row">
@@ -59,8 +61,8 @@ select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10p
 </div>
 
 <div class="card">
-<canvas id="cv" width="900" height="560"></canvas>
-<p class="hint">✋ 在画布上按住拖动 = 轨道旋转；切换透视投影对比一下平行投影的差异</p>
+<canvas id="cv"></canvas>
+<p class="hint">✋ 按住拖动 = 轨道旋转 · 遮挡由 GPU 深度缓冲处理 · 轴色标：<span style="color:#f85149">■ x</span> <span style="color:#7ee787">■ y</span> <span style="color:#79c0ff">■ z</span></p>
 </div>
 
 <div class="card">
@@ -72,180 +74,257 @@ select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10p
 </div>
 
 <script>
-var SHAPES = {
-  cube: {
-    v:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],
-    f:[[0,1,2,3],[7,6,5,4],[4,5,1,0],[2,3,7,6],[1,5,6,2],[0,3,7,4]]
-  },
-  tetra: {
-    v:[[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]],
-    f:[[0,1,2],[0,3,1],[0,2,3],[1,3,2]]
-  },
-  octa: {
-    v:[[1.4,0,0],[-1.4,0,0],[0,1.4,0],[0,-1.4,0],[0,0,1.4],[0,0,-1.4]],
-    f:[[0,2,4],[2,1,4],[1,3,4],[3,0,4],[2,0,5],[1,2,5],[3,1,5],[0,3,5]]
-  }
-};
-var FACE_HUES = [212, 280, 45, 150, 340, 190, 30, 110];
-
+'use strict';
 function gid(id){ return document.getElementById(id); }
 function num(id){ return parseFloat(gid(id).value); }
 function deg(v){ return v*Math.PI/180; }
+function clampAngle(a){ a=((a+180)%360+360)%360-180; return a; }
 
-// —— 纯数学函数（可独立测试）——
-function matMul(A,B){
-  var C=[[0,0,0],[0,0,0],[0,0,0]];
-  for(var i=0;i<3;i++)for(var j=0;j<3;j++){
-    C[i][j]=A[i][0]*B[0][j]+A[i][1]*B[1][j]+A[i][2]*B[2][j];
-  }
-  return C;
-}
+function sub(a,b){ return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
+function cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function norm3(a){ var l=Math.sqrt(dot(a,a))||1; return [a[0]/l,a[1]/l,a[2]/l]; }
+
 function rotM(rx,ry,rz){
   var cx=Math.cos(rx),sx=Math.sin(rx),cy=Math.cos(ry),sy=Math.sin(ry),cz=Math.cos(rz),sz=Math.sin(rz);
   var X=[[1,0,0],[0,cx,-sx],[0,sx,cx]];
   var Y=[[cy,0,sy],[0,1,0],[-sy,0,cy]];
   var Z=[[cz,-sz,0],[sz,cz,0],[0,0,1]];
-  return matMul(Z, matMul(Y, X));
+  return mm3(Z,mm3(Y,X));
 }
-function applyM(M,v){
-  return [ M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2],
-           M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2],
-           M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2] ];
+function mm3(A,B){
+  var C=[[0,0,0],[0,0,0],[0,0,0]];
+  for(var i=0;i<3;i++)for(var j=0;j<3;j++)C[i][j]=A[i][0]*B[0][j]+A[i][1]*B[1][j]+A[i][2]*B[2][j];
+  return C;
 }
-function sub(a,b){ return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
-function cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
-function dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
-function norm(a){ var l=Math.sqrt(dot(a,a))||1; return [a[0]/l,a[1]/l,a[2]/l]; }
-function clampAngle(a){ a=((a+180)%360+360)%360-180; return a; }
-
-// 固定旋转顺序：X → Y → Z，组合为 R = Rz·Ry·Rx
-function currentM(){
-  return rotM(deg(num('c_rx')), deg(num('c_ry')), deg(num('c_rz')));
+// —— 4x4 列主序（WebGL 直接可用） ——
+function m3to4(R){
+  return new Float32Array([R[0][0],R[1][0],R[2][0],0, R[0][1],R[1][1],R[2][1],0, R[0][2],R[1][2],R[2][2],0, 0,0,0,1]);
+}
+function m4mul(a,b){
+  var o=new Float32Array(16);
+  for(var c=0;c<4;c++)for(var r=0;r<4;r++){
+    var s=0;for(var k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];
+    o[c*4+r]=s;
+  }
+  return o;
+}
+function m4trans(z){ var o=new Float32Array(16);o[0]=o[5]=o[10]=o[15]=1;o[14]=z;return o; }
+function m4persp(fovy,aspect,near,far){
+  var f=1/Math.tan(fovy/2),o=new Float32Array(16);
+  o[0]=f/aspect;o[5]=f;o[10]=(far+near)/(near-far);o[11]=-1;o[14]=2*far*near/(near-far);
+  return o;
+}
+function m4ortho(hw,hh,near,far){
+  var o=new Float32Array(16);
+  o[0]=1/hw;o[5]=1/hh;o[10]=2/(near-far);o[14]=(far+near)/(near-far);o[15]=1;
+  return o;
+}
+function hsl2rgb(h,s,l){
+  h/=360;
+  function f(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}
+  var q=l<0.5?l*(1+s):l+s-l*s,p=2*l-q;
+  return [f(p,q,h+1/3),f(p,q,h),f(p,q,h-1/3)];
 }
 
-function render(){
-  gid('v_rx').textContent = num('c_rx') + '°';
-  gid('v_ry').textContent = num('c_ry') + '°';
-  gid('v_rz').textContent = num('c_rz') + '°';
-  gid('v_zm').textContent = num('c_zm');
-  gid('v_ds').textContent = num('c_ds');
+var SHAPES = {
+  cube:  { v:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],
+           f:[[0,1,2,3],[7,6,5,4],[4,5,1,0],[2,3,7,6],[1,5,6,2],[0,3,7,4]] },
+  tetra: { v:[[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]],
+           f:[[0,1,2],[0,3,1],[0,2,3],[1,3,2]] },
+  octa:  { v:[[1.4,0,0],[-1.4,0,0],[0,1.4,0],[0,-1.4,0],[0,0,1.4],[0,0,-1.4]],
+           f:[[0,2,4],[2,1,4],[1,3,4],[3,0,4],[2,0,5],[1,2,5],[3,1,5],[0,3,5]] }
+};
+var FACE_HUES = [212, 280, 45, 150, 340, 190, 30, 110];
+var LIGHT = norm3([0.4, 0.7, 0.62]);
+var EDGE_COL = [0.05, 0.065, 0.09];
 
-  var cv = gid('cv'), ctx = cv.getContext('2d');
-  var ox = cv.width/2, oy = cv.height/2;
-  var unit = num('c_zm'), dist = num('c_ds');
-  var persp = gid('k_persp').checked;
-  var M = currentM();
-  var shape = SHAPES[gid('c_shape').value];
-
-  function project(p){
-    var f = 1;
-    if (persp) { var d = Math.max(dist - p[2], 0.5); f = dist / d; }
-    return [ox + p[0]*unit*f, oy - p[1]*unit*f];
-  }
-  function drawPoly(pts, stroke, fill, lw){
-    ctx.beginPath();
-    pts.forEach(function(p,i){ if(i===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); });
-    ctx.closePath();
-    if (fill){ ctx.fillStyle = fill; ctx.fill(); }
-    ctx.strokeStyle = stroke; ctx.lineWidth = lw||1.5; ctx.stroke();
-  }
-
-  ctx.clearRect(0,0,cv.width,cv.height);
-
-  // 坐标轴
-  if (gid('k_axes').checked) {
-    var axes = [
-      {v:[1.7,0,0], c:'#f85149', l:'x'},
-      {v:[0,1.7,0], c:'#7ee787', l:'y'},
-      {v:[0,0,1.7], c:'#79c0ff', l:'z'}
-    ];
-    axes.forEach(function(ax){
-      var p0 = project(applyM(M,[0,0,0])), p1 = project(applyM(M,ax.v));
-      ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]);
-      ctx.strokeStyle = ax.c; ctx.lineWidth = 2; ctx.stroke();
-      ctx.fillStyle = ax.c; ctx.font = 'bold 15px sans-serif';
-      ctx.fillText(ax.l, p1[0]+6, p1[1]-6);
-    });
-  }
-
-  var rv = shape.v.map(function(v){ return applyM(M, v); });
-  var light = norm([0.4, 0.7, 0.62]);
-  var cam = [0,0,dist];
-
-  var faces = shape.f.map(function(f, idx){
-    var verts = f.map(function(i){ return rv[i]; });
-    var cen = [0,0,0];
-    verts.forEach(function(v){ cen[0]+=v[0]/verts.length; cen[1]+=v[1]/verts.length; cen[2]+=v[2]/verts.length; });
-    var n = norm(cross(sub(verts[1],verts[0]), sub(verts[2],verts[0])));
-    // 统一外法线：凸体中心在原点，面心方向即外向；法线与面心反向则翻转
-    if (dot(n, cen) < 0) n = [-n[0],-n[1],-n[2]];
-    var visible = dot(n, sub(cam, cen)) > 0;
-    var shade = 0.35 + 0.65 * Math.max(0, dot(n, light));
-    return { idx:idx, verts:verts, cen:cen, n:n, visible:visible, depth:cen[2], shade:shade };
-  }).filter(function(fc){ return fc.visible; })
-    .sort(function(a,b){ return a.depth - b.depth; }); // painter：远的先画
-
-  faces.forEach(function(fc){
-    var pts = fc.verts.map(project);
-    var hue = FACE_HUES[fc.idx % FACE_HUES.length];
-    var lum = Math.round(28 + 40 * fc.shade);
-    drawPoly(pts, 'rgba(13,17,23,.95)', 'hsl(' + hue + ',65%,' + lum + '%)', 1.5);
+function buildShape(name){
+  var s = SHAPES[name], P=[], N=[], C=[], E=[];
+  s.f.forEach(function(f, idx){
+    var pts = f.map(function(i){ return s.v[i]; });
+    var cen=[0,0,0];
+    pts.forEach(function(v){ cen[0]+=v[0]/pts.length; cen[1]+=v[1]/pts.length; cen[2]+=v[2]/pts.length; });
+    var n = norm3(cross(sub(pts[1],pts[0]), sub(pts[2],pts[0])));
+    if (dot(n, cen) < 0) n = [-n[0],-n[1],-n[2]];  // 凸体：外法线与面心同向
+    var rgb = hsl2rgb(FACE_HUES[idx % FACE_HUES.length], 0.65, 0.5);
+    for (var k=1;k<pts.length-1;k++){
+      var t=[pts[0], pts[k], pts[k+1]];
+      if (dot(cross(sub(t[1],t[0]), sub(t[2],t[0])), n) < 0) t=[t[0],t[2],t[1]]; // 统一 CCW 绕向
+      t.forEach(function(p){ P.push(p[0],p[1],p[2]); N.push(n[0],n[1],n[2]); C.push(rgb[0],rgb[1],rgb[2]); });
+    }
+    for (var k=0;k<pts.length;k++){
+      var a=pts[k], b=pts[(k+1)%pts.length];
+      E.push(a[0],a[1],a[2], b[0],b[1],b[2]);
+    }
   });
-
-  // 顶点
-  if (!faces.length) {
-    rv.forEach(function(v){
-      var p = project(v);
-      ctx.beginPath(); ctx.arc(p[0],p[1],3,0,Math.PI*2);
-      ctx.fillStyle = '#58a6ff'; ctx.fill();
-    });
-  }
-
-  // 矩阵显示
-  var cells = [];
-  for (var i=0;i<3;i++) for (var j=0;j<3;j++) cells.push(parseFloat(M[i][j].toFixed(2)));
-  gid('mat3').innerHTML = cells.map(function(v){ return '<div class="m-cell">' + v + '</div>'; }).join('');
+  return { pos:new Float32Array(P), nrm:new Float32Array(N), col:new Float32Array(C),
+           edgePos:new Float32Array(E), edgeCol:new Float32Array(E.length),  // 棱线全黑(0,0,0)
+           nTri:P.length/3, nEdge:E.length/3 };
 }
 
-// —— 拖拽轨道旋转 ——
-var dragging = false, last = null;
-var cvEl = gid('cv');
-cvEl.addEventListener('mousedown', function(e){ dragging = true; last = [e.clientX, e.clientY]; });
-window.addEventListener('mouseup', function(){ dragging = false; });
-window.addEventListener('mousemove', function(e){
-  if (!dragging) return;
-  var dx = e.clientX - last[0], dy = e.clientY - last[1];
-  last = [e.clientX, e.clientY];
-  gid('c_ry').value = clampAngle(num('c_ry') + dx * 0.5);
-  gid('c_rx').value = clampAngle(num('c_rx') + dy * 0.5);
-  render();
-});
-cvEl.addEventListener('touchstart', function(e){ dragging = true; last = [e.touches[0].clientX, e.touches[0].clientY]; }, {passive:true});
-window.addEventListener('touchend', function(){ dragging = false; });
-cvEl.addEventListener('touchmove', function(e){
-  if (!dragging) return;
-  var t = e.touches[0], dx = t.clientX - last[0], dy = t.clientY - last[1];
-  last = [t.clientX, t.clientY];
-  gid('c_ry').value = clampAngle(num('c_ry') + dx * 0.5);
-  gid('c_rx').value = clampAngle(num('c_rx') + dy * 0.5);
-  render();
-}, {passive:true});
+var VS_MESH='attribute vec3 aPos;attribute vec3 aNrm;attribute vec3 aCol;\n'+
+'uniform mat4 uMVP;uniform mat3 uRot;\nvarying vec3 vN;varying vec3 vC;\n'+
+'void main(){gl_Position=uMVP*vec4(aPos,1.0);vN=uRot*aNrm;vC=aCol;}';
+var FS_MESH='precision mediump float;\nvarying vec3 vN;varying vec3 vC;\nuniform vec3 uLight;\n'+
+'void main(){float d=max(dot(normalize(vN),normalize(uLight)),0.0);gl_FragColor=vec4(vC*(0.35+0.65*d),1.0);}';
+var VS_LINE='attribute vec3 aPos;attribute vec3 aCol;\nuniform mat4 uMVP;\nvarying vec3 vC;\n'+
+'void main(){gl_Position=uMVP*vec4(aPos,1.0);vC=aCol;}';
+var FS_LINE='precision mediump float;\nvarying vec3 vC;\nvoid main(){gl_FragColor=vec4(vC,1.0);}';
 
-['c_shape','c_rx','c_ry','c_rz','c_zm','c_ds','k_persp','k_axes'].forEach(function(id){
-  gid(id).addEventListener('input', render);
-  gid(id).addEventListener('change', render);
-});
+var cv = gid('cv');
+var gl = cv.getContext('webgl', { antialias:true, preserveDrawingBuffer:true })
+      || cv.getContext('experimental-webgl');
+window.__gl = gl;
+window.__glReady = !!gl;
 
-// 自动旋转
-(function tick(){
-  if (gid('k_auto').checked) {
-    gid('c_ry').value = clampAngle(num('c_ry') + 0.5);
-    render();
+var meshProg, lineProg, geom, bufs;
+
+function mkShader(type, src){
+  var s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function mkProg(vs,fs){
+  var p=gl.createProgram();
+  gl.attachShader(p,mkShader(gl.VERTEX_SHADER,vs));
+  gl.attachShader(p,mkShader(gl.FRAGMENT_SHADER,fs));
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+function mkBuf(arr){
+  var b=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,b);
+  gl.bufferData(gl.ARRAY_BUFFER,arr,gl.STATIC_DRAW); return b;
+}
+function setAttr(prog,name,buf){
+  var loc=gl.getAttribLocation(prog,name);
+  if(loc<0) return;
+  gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);
+}
+
+function loadShape(name){
+  geom = buildShape(name);
+  ['pos','nrm','col','edgePos','edgeCol'].forEach(function(k){
+    if (bufs && bufs[k]) gl.deleteBuffer(bufs[k]);
+    bufs[k] = mkBuf(geom[k]);
+  });
+}
+
+if (!gl) {
+  cv.parentElement.innerHTML = '<p class="gl-fail">⚠️ 当前浏览器不支持 WebGL，无法渲染 3D。<br>请更新浏览器（Chrome / Edge / 新版 Safari）或开启硬件加速。</p>';
+} else {
+  meshProg = mkProg(VS_MESH, FS_MESH);
+  lineProg = mkProg(VS_LINE, FS_LINE);
+  bufs = {};
+  loadShape(gid('c_shape').value);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+  gl.clearColor(0.051, 0.067, 0.090, 1);
+
+  var AXES_BUF = (function(){
+    var p=[0,0,0, 1.7,0,0, 0,0,0, 0,1.7,0, 0,0,0, 0,0,1.7];
+    var c=[0.973,0.318,0.286, 0.973,0.318,0.286,
+           0.494,0.906,0.529, 0.494,0.906,0.529,
+           0.475,0.753,1.0,   0.475,0.753,1.0];
+    return { pos: mkBuf(new Float32Array(p)), col: mkBuf(new Float32Array(c)) };
+  })();
+
+  function fit(){
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = Math.max(1, Math.round(cv.clientWidth  * dpr));
+    var h = Math.max(1, Math.round(cv.clientHeight * dpr));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    gl.viewport(0, 0, w, h);
+    return { W: cv.clientWidth || 900, H: cv.clientHeight || 560 };
   }
-  requestAnimationFrame(tick);
-})();
 
-render();
+  function render(){
+    gid('v_rx').textContent = num('c_rx') + '°';
+    gid('v_ry').textContent = num('c_ry') + '°';
+    gid('v_rz').textContent = num('c_rz') + '°';
+    gid('v_zm').textContent = num('c_zm');
+    gid('v_ds').textContent = num('c_ds');
+
+    var d = fit();
+    var persp = gid('k_persp').checked;
+    var unit = num('c_zm'), dist = num('c_ds');
+    var aspect = d.W / d.H, near = 0.1, far = dist + 5;
+
+    var R3 = rotM(deg(num('c_rx')), deg(num('c_ry')), deg(num('c_rz')));
+    var proj = persp
+      ? m4persp(2*Math.atan((d.H/2)/(unit*dist)), aspect, near, far)
+      : m4ortho((d.W/2)/unit, (d.H/2)/unit, near, far);
+    var mvp = m4mul(proj, m4mul(m4trans(-dist), m3to4(R3)));
+    var rot4 = new Float32Array([R3[0][0],R3[1][0],R3[2][0], R3[0][1],R3[1][1],R3[2][1], R3[0][2],R3[1][2],R3[2][2]]);
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.useProgram(meshProg);
+    gl.uniformMatrix4fv(gl.getUniformLocation(meshProg,'uMVP'), false, mvp);
+    gl.uniformMatrix3fv(gl.getUniformLocation(meshProg,'uRot'), false, rot4);
+    gl.uniform3fv(gl.getUniformLocation(meshProg,'uLight'), LIGHT);
+    setAttr(meshProg,'aPos',bufs.pos);
+    setAttr(meshProg,'aNrm',bufs.nrm);
+    setAttr(meshProg,'aCol',bufs.col);
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(1.5, 1.5);            // 面沿深度方向后推，让棱线干净压在上面
+    gl.drawArrays(gl.TRIANGLES, 0, geom.nTri);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+
+    gl.useProgram(lineProg);
+    gl.uniformMatrix4fv(gl.getUniformLocation(lineProg,'uMVP'), false, mvp);
+    setAttr(lineProg,'aPos',bufs.edgePos);
+    setAttr(lineProg,'aCol',bufs.edgeCol);
+    gl.drawArrays(gl.LINES, 0, geom.nEdge);
+
+    if (gid('k_axes').checked) {
+      setAttr(lineProg,'aPos',AXES_BUF.pos);
+      setAttr(lineProg,'aCol',AXES_BUF.col);
+      gl.drawArrays(gl.LINES, 0, 6);
+    }
+
+    var cells=[];
+    for(var r=0;r<3;r++)for(var c=0;c<3;c++)cells.push(parseFloat(R3[r][c].toFixed(2)));
+    gid('mat3').innerHTML = cells.map(function(v){return '<div class="m-cell">'+v+'</div>';}).join('');
+  }
+  window.__render = render;
+
+  // —— 交互 ——
+  var dragging=false, last=null;
+  function orbit(dx,dy){
+    gid('c_ry').value = clampAngle(num('c_ry') + dx*0.5);
+    gid('c_rx').value = clampAngle(num('c_rx') + dy*0.5);
+  }
+  cv.addEventListener('mousedown', function(e){ dragging=true; last=[e.clientX,e.clientY]; });
+  window.addEventListener('mouseup', function(){ dragging=false; });
+  window.addEventListener('mousemove', function(e){
+    if(!dragging) return;
+    orbit(e.clientX-last[0], e.clientY-last[1]); last=[e.clientX,e.clientY];
+  });
+  cv.addEventListener('touchstart', function(e){ dragging=true; last=[e.touches[0].clientX,e.touches[0].clientY]; }, {passive:true});
+  window.addEventListener('touchend', function(){ dragging=false; });
+  cv.addEventListener('touchmove', function(e){
+    if(!dragging) return;
+    var t=e.touches[0]; orbit(t.clientX-last[0], t.clientY-last[1]); last=[t.clientX,t.clientY];
+  }, {passive:true});
+
+  gid('c_shape').addEventListener('change', function(){ loadShape(this.value); });
+  ['c_rx','c_ry','c_rz','c_zm','c_ds','k_persp','k_axes'].forEach(function(id){
+    gid(id).addEventListener('input', render);
+    gid(id).addEventListener('change', render);
+  });
+  window.addEventListener('resize', render);
+
+  (function loop(){
+    if (gid('k_auto').checked) gid('c_ry').value = clampAngle(num('c_ry') + 0.5);
+    render();
+    requestAnimationFrame(loop);
+  })();
+}
 </script>
 </body>
 </html>
