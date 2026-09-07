@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💀 跨射伤量分析</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:900px;margin:0 auto}
+.back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
+.back-link:hover{text-decoration:underline}
+h1{margin-bottom:8px;font-size:2rem;color:#a371f7}
+.subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+.row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+input,select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;transition:all .2s}
+input:focus,select:focus{outline:none;border-color:#a371f7;box-shadow:0 0 0 3px rgba(163,113,247,.15)}
+textarea{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;font-family:monospace;resize:vertical;transition:all .2s}
+textarea:focus{outline:none;border-color:#a371f7}
+.btn{background:#238636;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.95rem;cursor:pointer;transition:all .2s}
+.btn:hover{background:#2ea043}
+.btn-secondary{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+.btn-secondary:hover{background:#30363d;border-color:#8b949e}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px}
+.result-item{background:#0d1117;border-radius:8px;padding:16px;text-align:center}
+.result-item .val{font-size:1.8rem;font-weight:bold;color:#a371f7;margin:8px 0}
+.result-item .lbl{color:#8b949e;font-size:.8rem}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #21262d}
+th{color:#8b949e;font-size:.8rem;font-weight:normal}
+td{color:#e6edf3;font-size:.9rem}
+tr:hover td{background:rgba(163,113,247,.05)}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+@media(max-width:600px){body{padding:20px}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="index.html">← 返回工具集</a>
+<h1>💀 Valorant 跨射伤量分析</h1>
+<p class="subtitle">计算穿墙后的子弹伤害衰减（Phantom / Vandal / Shorty / Sova Op.）</p>
+<div class="card">
+<div class="row">
+<div style="flex:1"><label>穿越墙体数</label>
+<select id="wallsCrossed">
+<option value="0">0 面墙 (不衰减)</option>
+<option value="1" selected>1 面墙 (-20%)</option>
+<option value="2">2 面墙 (-40%)</option>
+<option value="3">3 面墙 (-60%)</option>
+<option value="4">4 面墙 (-80%)</option>
+</select></div>
+<div style="flex:1"><label>射击距离</label>
+<select id="distSelect">
+<option value="close">近距离 (&lt; 15m)</option>
+<option value="mid" selected>中距离 (15-50m)</option>
+<option value="far">远距离 (&gt; 50m)</option>
+</select></div>
+</div>
+<div class="row">
+<div style="flex:1"><label>武器</label>
+<select id="weaponSelect">
+<option value="phantom">Phantom</option>
+<option value="vandal">Vandal</option>
+<option value="shorty">Shorty</option>
+<option value="sova">Sova Op.</option>
+</select></div>
+</div>
+<button class="btn" onclick="calcPen()">计算剩余伤害</button>
+<div id="penResult"></div>
+</div>
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+<script>
+var weaponData={phantom:{hp45:140,hp39:120,hp30:105},vandal:{hp45:150,hp39:140,hp30:80},shorty:{hp45:36,hp39:18,hp30:12},sova:{hp45:150,hp39:125,hp30:85}};
+var wallPenalty=[1,0.8,0.6,0.4,0.2];var distMap={close:'hp45',mid:'hp39',far:'hp30'};
+function calcPen(){var w=document.getElementById('weaponSelect').value;var walls=parseInt(document.getElementById('wallsCrossed').value);var dist=document.getElementById('distSelect').value;var wd=weaponData[w];var rawHP=wd[distMap[dist]];var finalHP=Math.ceil(rawHP*wallPenalty[walls]);var status,statusColor;if(finalHP>=50){status='一击必杀';statusColor='#2ea043';}else if(finalHP>=20){status='两枪或三枪能杀';statusColor='#d29922';}else{status='至少需要三枪以上';statusColor='#f85149';}document.getElementById('penResult').innerHTML='<div class="result-grid">'+'<div class="result-item"><div class="lbl">原始伤害('+dist+')</div><div class="val">'+rawHP+'</div></div>'+'<div class="result-item"><div class="lbl">穿透衰减</div><div class="val">×</div></div>'+'<div class="result-item"><div class="lbl">最终伤害</div><div class="val" style="color:'+statusColor+'">'+finalHP+'</div></div>'+'</div>'+'<p style="color:#8b949e;margin-top:8px;font-size:.8rem">'+status+'</p>';}
+</script>
+</body>
+</html>

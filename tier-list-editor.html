@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📋 T 级排行榜编辑器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:900px;margin:0 auto}
+.back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
+.back-link:hover{text-decoration:underline}
+h1{margin-bottom:8px;font-size:2rem;color:#a371f7}
+.subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+.row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+input,select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;transition:all .2s}
+input:focus,select:focus{outline:none;border-color:#a371f7;box-shadow:0 0 0 3px rgba(163,113,247,.15)}
+textarea{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;font-family:monospace;resize:vertical;transition:all .2s}
+textarea:focus{outline:none;border-color:#a371f7}
+.btn{background:#238636;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.95rem;cursor:pointer;transition:all .2s}
+.btn:hover{background:#2ea043}
+.btn-secondary{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+.btn-secondary:hover{background:#30363d;border-color:#8b949e}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px}
+.result-item{background:#0d1117;border-radius:8px;padding:16px;text-align:center}
+.result-item .val{font-size:1.8rem;font-weight:bold;color:#a371f7;margin:8px 0}
+.result-item .lbl{color:#8b949e;font-size:.8rem}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #21262d}
+th{color:#8b949e;font-size:.8rem;font-weight:normal}
+td{color:#e6edf3;font-size:.9rem}
+tr:hover td{background:rgba(163,113,247,.05)}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+@media(max-width:600px){body{padding:20px}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="index.html">← 返回工具集</a>
+<h1>📋 T0-T5 排行榜编辑器</h1>
+<p class="subtitle">输入角色名分配到不同 T 级，实时预览并导出文本格式（适用于任何游戏）</p>
+<div class="card">
+<div id="tierEditor"></div>
+<div id="tierPreview" style="margin-top:16px"></div>
+<button class="btn" onclick="exportTierList()">导出为文本格式</button>
+</div>
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+<script>
+var tierColors={T0:'#ff7b72',T1:'#ffa657',T2:'#d29922',T3:'#e3b341',T4:'#7eb062',T5:'#6e7681'};
+function tierRow(t,bg,fg,style){return '<div class="row" style="align-items:center"><div style="width:80px;padding:8px 12px;border-radius:6px;text-align:center;font-weight:bold;color:'+fg+';background:'+bg+'">'+t+'</div><div style="flex:1"><textarea rows="3" placeholder="每行一个角色名..." class="tier-input" data-tier="'+t+'" oninput="autoBuildTierList()"></textarea></div></div>';}
+function buildEditor(){document.getElementById('tierEditor').innerHTML=tierRow('T0','#ff7b72','#fff')+tierRow('T1','#ffa657','#000')+tierRow('T2','#d29922','#000')+tierRow('T3','#e3b341','#000')+tierRow('T4','#7eb062','#000')+tierRow('T5','#6e7681','#fff');}
+function autoBuildTierList(){var tiers=['T0','T1','T2','T3','T4','T5'];var h='<table><thead><tr><th>T级</th><th>数量</th><th>角色列表</th></tr></thead><tbody>';tiers.forEach(function(t){var textarea=document.querySelector('.tier-input[data-tier="'+t+'"]');var names=[];if(textarea&&textarea.value){names=textarea.value.split('\n').map(function(n){return n.trim();}).filter(function(n){return n.length>0;});}h+='<tr>';h+='<td><span style="display:inline-block;padding:2px 10px;border-radius:4px;color:#fff;background:'+tierColors[t]+'">'+t+'</span></td>';h+='<td>'+names.length+'</td>';h+='<td>'+(names.length>0?names.map(function(n){return '<span style="margin:2px;display:inline-block;background:#21262d;padding:2px 8px;border-radius:4px">'+n+'</span>';}).join(' '):'<span style="color:#484f58">未填写</span>')+'</td>';h+='</tr>';});h+='</tbody></table>';document.getElementById('tierPreview').innerHTML=h;}
+function exportTierList(){var tiers=['T0','T1','T2','T3','T4','T5'];var text='# 角色排行榜\n\n';tiers.forEach(function(t){var textarea=document.querySelector('.tier-input[data-tier="'+t+'"]');var names=[];if(textarea&&textarea.value){names=textarea.value.split('\n').map(function(n){return n.trim();}).filter(function(n){return n.length>0;});}text+='## '+t+'\n';if(names.length>0){names.forEach(function(n,i){text+=(i+1)+'. '+n+'\n';});}else{text+='(空)\n';}text+='\n';});alert(text);if(navigator.clipboard){navigator.clipboard.writeText(text).catch(function(){});}}
+buildEditor();autoBuildTierList();
+</script>
+</body>
+</html>

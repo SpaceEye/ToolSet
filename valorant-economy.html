@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💰 回合经济计算器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:900px;margin:0 auto}
+.back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
+.back-link:hover{text-decoration:underline}
+h1{margin-bottom:8px;font-size:2rem;color:#a371f7}
+.subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+.row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+input,select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;transition:all .2s}
+input:focus,select:focus{outline:none;border-color:#a371f7;box-shadow:0 0 0 3px rgba(163,113,247,.15)}
+textarea{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;font-family:monospace;resize:vertical;transition:all .2s}
+textarea:focus{outline:none;border-color:#a371f7}
+.btn{background:#238636;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.95rem;cursor:pointer;transition:all .2s}
+.btn:hover{background:#2ea043}
+.btn-secondary{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+.btn-secondary:hover{background:#30363d;border-color:#8b949e}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px}
+.result-item{background:#0d1117;border-radius:8px;padding:16px;text-align:center}
+.result-item .val{font-size:1.8rem;font-weight:bold;color:#a371f7;margin:8px 0}
+.result-item .lbl{color:#8b949e;font-size:.8rem}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #21262d}
+th{color:#8b949e;font-size:.8rem;font-weight:normal}
+td{color:#e6edf3;font-size:.9rem}
+tr:hover td{background:rgba(163,113,247,.05)}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+@media(max-width:600px){body{padding:20px}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="index.html">← 返回工具集</a>
+<h1>💰 Valorant 经济计算器</h1>
+<p class="subtitle">根据存活/击杀/回合输赢预测下一回合资金</p>
+<div class="card">
+<div class="row">
+<div style="flex:1"><label>当前资金</label><input type="number" id="currMoney" value="800"></div>
+<div style="flex:1"><label>上回合结果</label>
+<select id="roundResult">
+<option value="win">获胜</option>
+<option value="lose">失败</option>
+<option value="loss_bonus">连败奖励</option>
+</select></div>
+</div>
+<div class="row">
+<div style="flex:1"><label>是否连续存活(购买除外)</label>
+<select id="survived">
+<option value="yes">是</option>
+<option value="no">否</option>
+</select></div>
+</div>
+<button class="btn" onclick="calcEco()">计算下回合资金</button>
+<div id="ecoResult"></div>
+</div>
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+<script>
+function calcEco(){var curr=parseInt(document.getElementById('currMoney').value)||800;var result=document.getElementById('roundResult').value;var survived=document.getElementById('survived').value;var gain;switch(result){case 'win':gain=survived==='yes'?2200:1400;break;case 'lose':gain=1400+(curr<1900?3250:0);break;case 'loss_bonus':gain=1400+3250;break;}var next=Math.min(curr+gain,10000);document.getElementById('ecoResult').innerHTML='<div class="result-grid">'+'<div class="result-item"><div class="lbl">当前资金</div><div class="val">$'+curr.toLocaleString()+'</div></div>'+'<div class="result-item"><div class="lbl">预计收入</div><div class="val">+$'+gain.toLocaleString()+'</div></div>'+'<div class="result-item"><div class="lbl">下回合预计</div><div class="val">$'+next.toLocaleString()+'</div></div>'+'</div>';}
+</script>
+</body>
+</html>

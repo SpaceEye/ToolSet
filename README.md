@@ -61,11 +61,19 @@
 | [CSV/表格转换器](csv-converter.html) | CSV、JSON、表格互转 |
 | [单位换算器](unit-converter.html) | 长度/重量/温度/数据等多单位换算 |
 
-### 🎮 其它
+### 🎮 游戏工具箱
 
 | 工具 | 描述 |
 |------|------|
-| [游戏工具](gaming-tools.html) | 骰子/随机数/决策轮盘等游戏小工具 |
+| [Minecraft 经验计算器](mc-xp-calculator.html) | 升级经验计算 + 1-50 级附魔 XP 表 |
+| [红石时钟计算器](mc-redstone-clock.html) | 比较器数量 → 循环周期/频率 |
+| [LOL KDA 计算器](lol-kda.html) | 击杀/死亡/助攻比值 |
+| [技能冷却计算器](lol-cdr.html) | 基础 CD × 冷却缩减 |
+| [Valorant 跨射伤量分析](valorant-penetration.html) | 穿墙伤害衰减与击杀判断 |
+| [Valorant 经济计算器](valorant-economy.html) | 下一回合资金预测 |
+| [FPS 准星生成器](crosshair-generator.html) | 自定义参数生成 SVG 准星 |
+| [T 级排行榜编辑器](tier-list-editor.html) | T0-T5 角色分级，导出文本 |
+| [游戏工具箱（合集）](gaming-tools.html) | 以上工具的合集页（保留兼容） |
 
 ---
 
@@ -82,6 +90,7 @@ ToolsSet/
 ├── color-wheel.html            # 色轮选择器
 ├── complementary-colors.html   # 互补色生成器
 ├── contrast-checker.html       # 对比度检查
+├── crosshair-generator.html    # FPS 准星生成器
 ├── cron-parser.html            # Cron 表达式解析器
 ├── css-units.html              # CSS 单位转换器
 ├── csv-converter.html          # CSV/表格转换器
@@ -93,15 +102,22 @@ ToolsSet/
 ├── ip-calculator.html          # IP 地址计算器
 ├── json-formatter.html         # JSON 格式化器
 ├── jwt-decoder.html            # JWT 解码器
+├── lol-cdr.html                # 技能冷却计算器
+├── lol-kda.html                # LOL KDA 计算器
 ├── markdown-preview.html       # Markdown 预览器
+├── mc-redstone-clock.html      # 红石时钟计算器
+├── mc-xp-calculator.html       # Minecraft 经验计算器
 ├── password-generator.html     # 密码生成器
 ├── placeholder-image.html      # 占位图片生成器
 ├── qrcode-generator.html       # QR 二维码生成器
 ├── radix-converter.html        # 进制转换器
 ├── regex-tester.html           # 正则表达式测试器
+├── tier-list-editor.html       # T 级排行榜编辑器
 ├── timestamp-converter.html    # 时间戳转换器
 ├── unit-converter.html         # 单位换算器
 ├── url-encoder.html            # URL 编解码器
+├── valorant-economy.html       # Valorant 经济计算器
+├── valorant-penetration.html   # Valorant 跨射伤量分析
 ├── uuid-generator.html         # UUID 生成器
 ├── hex-converter.py            # 命令行进制转换小工具（独立脚本）
 ├── .gitignore
