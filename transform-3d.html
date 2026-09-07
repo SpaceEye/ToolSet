@@ -177,8 +177,8 @@ function render(){
     var cen = [0,0,0];
     verts.forEach(function(v){ cen[0]+=v[0]/verts.length; cen[1]+=v[1]/verts.length; cen[2]+=v[2]/verts.length; });
     var n = norm(cross(sub(verts[1],verts[0]), sub(verts[2],verts[0])));
-    // 自动修正绕向，保证法线朝外
-    if (dot(n, sub(verts[0], cen)) < 0) n = [-n[0],-n[1],-n[2]];
+    // 统一外法线：凸体中心在原点，面心方向即外向；法线与面心反向则翻转
+    if (dot(n, cen) < 0) n = [-n[0],-n[1],-n[2]];
     var visible = dot(n, sub(cam, cen)) > 0;
     var shade = 0.35 + 0.65 * Math.max(0, dot(n, light));
     return { idx:idx, verts:verts, cen:cen, n:n, visible:visible, depth:cen[2], shade:shade };
