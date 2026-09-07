@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> CSV/表格转换器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        textarea { width: 100%; height: 200px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; color: #e6edf3; font-family: 'Consolas', monospace; font-size: 0.85rem; resize: vertical; }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn { padding: 10px 18px; background: #238636; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.9rem; }
+        .btn:hover { background: #2ea043; }
+        .btn-secondary { background: #21262d; color: #79c0ff; border: 1px solid #30363d; }
+        .btn-secondary:hover { background: #30363d; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 0.85rem; }
+        th, td { border: 1px solid #30363d; padding: 8px; text-align: left; }
+        th { background: #0d1117; color: #58a6ff; }
+        tr:nth-child(even) { background: #0d1117; }
+        .error { color: #da3633; margin-top: 10px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>📊 CSV/表格转换器</h1>
+        <p class="subtitle">CSV 与 Markdown 表格、JSON 数组之间互相转换，并实时预览</p>
+
+        <div class="card">
+            <div class="card-title"> 输入 / 输出</div>
+            <textarea id="input" placeholder="粘贴 CSV 数据，例如：&#10;姓名,年龄,城市&#10;张三,25,北京&#10;李四,30,上海"></textarea>
+            <div class="btn-row">
+                <button class="btn" onclick="csvToTable()">CSV → 表格</button>
+                <button class="btn" onclick="csvToJson()">CSV → JSON</button>
+                <button class="btn" onclick="jsonToCsv()">JSON → CSV</button>
+                <button class="btn btn-secondary" onclick="copyResult()">复制</button>
+                <button class="btn btn-secondary" onclick="clearAll()">清空</button>
+            </div>
+            <div id="error" class="error"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">👁️ 表格预览</div>
+            <div id="tablePreview" style="overflow-x:auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        function parseCSV(text) {
+            const rows = [];
+            const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^,\n]*))(?:,|\n|$)/g;
+            let row = [];
+            let match;
+            let line = 0;
+            while ((match = regex.exec(text)) !== null) {
+                let val = match[1] !== undefined ? match[1].replace(/""/g, '"') : match[2];
+                row.push(val);
+                if (match[0].endsWith('\n') || match.index + match[0].length >= text.length) {
+                    rows.push(row);
+                    row = [];
+                }
+            }
+            if (row.length) rows.push(row);
+            return rows.filter(r => r.some(c => c !== ''));
+        }
+
+        function csvToTable() {
+            try {
+                const text = document.getElementById('input').value;
+                const rows = parseCSV(text);
+                if (!rows.length) throw new Error('无有效数据');
+                let html = '<table><thead><tr>';
+                rows[0].forEach(c => html += '<th>' + escapeHtml(c) + '</th>');
+                html += '</tr></thead><tbody>';
+                for (let i = 1; i < rows.length; i++) {
+                    html += '<tr>' + rows[i].map(c => '<td>' + escapeHtml(c) + '</td>').join('') + '</tr>';
+                }
+                html += '</tbody></table>';
+                document.getElementById('tablePreview').innerHTML = html;
+                document.getElementById('error').textContent = '';
+            } catch (e) {
+                document.getElementById('error').textContent = '转换失败：' + e.message;
+            }
+        }
+
+        function csvToJson() {
+            try {
+                const text = document.getElementById('input').value;
+                const rows = parseCSV(text);
+                if (rows.length < 2) throw new Error('CSV 至少需要标题行和一行数据');
+                const headers = rows[0];
+                const out = [];
+                for (let i = 1; i < rows.length; i++) {
+                    const obj = {};
+                    headers.forEach((h, idx) => obj[h] = rows[i][idx] || '');
+                    out.push(obj);
+                }
+                document.getElementById('input').value = JSON.stringify(out, null, 2);
+                csvToTable();
+                document.getElementById('error').textContent = '';
+            } catch (e) {
+                document.getElementById('error').textContent = '转换失败：' + e.message;
+            }
+        }
+
+        function jsonToCsv() {
+            try {
+                const data = JSON.parse(document.getElementById('input').value);
+                if (!Array.isArray(data) || !data.length) throw new Error('JSON 必须是对象数组');
+                const headers = Object.keys(data[0]);
+                const lines = [headers.join(',')];
+                for (const row of data) {
+                    lines.push(headers.map(h => {
+                        const v = String(row[h] ?? '');
+                        if (/[",\n]/.test(v)) return '"' + v.replace(/"/g, '""') + '"';
+                        return v;
+                    }).join(','));
+                }
+                document.getElementById('input').value = lines.join('\n');
+                csvToTable();
+                document.getElementById('error').textContent = '';
+            } catch (e) {
+                document.getElementById('error').textContent = '转换失败：' + e.message;
+            }
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'})[c]);
+        }
+
+        function copyResult() {
+            const el = document.getElementById('input');
+            el.select();
+            document.execCommand('copy');
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('tablePreview').innerHTML = '';
+            document.getElementById('error').textContent = '';
+        }
+    </script>
+</body>
+</html>

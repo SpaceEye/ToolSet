@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💻 代码片段格式化</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        textarea { width: 100%; height: 220px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; color: #e6edf3; font-family: 'Consolas', monospace; font-size: 0.9rem; resize: vertical; }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn { padding: 10px 18px; background: #238636; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.9rem; }
+        .btn:hover { background: #2ea043; }
+        .btn-secondary { background: #21262d; color: #79c0ff; border: 1px solid #30363d; }
+        .btn-secondary:hover { background: #30363d; }
+        label { font-size: 0.85rem; color: #8b949e; margin-right: 12px; }
+        select { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px; color: #e6edf3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>💻 代码片段格式化</h1>
+        <p class="subtitle">简单美化代码缩进，支持空格/Tab 切换、统一换行、去除多余空行</p>
+
+        <div class="card">
+            <div class="card-title"> 输入</div>
+            <textarea id="input" placeholder="粘贴杂乱的代码..."></textarea>
+            <div style="margin-top:12px; display:flex; align-items:center; flex-wrap:wrap; gap:12px;">
+                <label>缩进字符
+                    <select id="indentChar">
+                        <option value="  ">2 空格</option>
+                        <option value="    ">4 空格</option>
+                        <option value="\t">Tab</option>
+                    </select>
+                </label>
+                <label><input type="checkbox" id="removeBlank" checked> 去除多余空行</label>
+            </div>
+            <div class="btn-row">
+                <button class="btn" onclick="formatCode()">格式化</button>
+                <button class="btn" onclick="minifyCode()">压缩</button>
+                <button class="btn btn-secondary" onclick="copyResult()">复制</button>
+                <button class="btn btn-secondary" onclick="clearAll()">清空</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"> 输出</div>
+            <textarea id="output" readonly placeholder="格式化后的代码..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        function formatCode() {
+            const input = document.getElementById('input').value;
+            const indent = document.getElementById('indentChar').value;
+            const removeBlank = document.getElementById('removeBlank').checked;
+
+            const lines = input.split('\n');
+            let level = 0;
+            const out = [];
+            const indentStr = typeof indent === 'string' ? indent : '    ';
+
+            for (let rawLine of lines) {
+                const line = rawLine.trim();
+                if (removeBlank && !line) continue;
+
+                let delta = 0;
+                // 简单统计大括号
+                for (const c of line) {
+                    if (c === '{' || c === '[' || c === '(') delta++;
+                    if (c === '}' || c === ']' || c === ')') delta--;
+                }
+
+                // 缩退：当前行以闭合符号开头
+                if (/^[}\]\)]/.test(line)) level--;
+
+                out.push(repeat(indentStr, Math.max(0, level)) + line);
+
+                // 缩进：当前行以开符号结尾
+                if (/[\{\[\(]$/.test(line)) level++;
+            }
+
+            document.getElementById('output').value = out.join('\n');
+        }
+
+        function minifyCode() {
+            const input = document.getElementById('input').value;
+            const out = input.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '').replace(/\n\s*/g, ' ').replace(/\s+/g, ' ').trim();
+            document.getElementById('output').value = out;
+        }
+
+        function repeat(str, n) {
+            let s = '';
+            for (let i = 0; i < n; i++) s += str;
+            return s;
+        }
+
+        function copyResult() {
+            const el = document.getElementById('output');
+            el.select();
+            document.execCommand('copy');
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('output').value = '';
+        }
+    </script>
+</body>
+</html>

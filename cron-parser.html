@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⏲️ Cron 表达式解析器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        input[type="text"] {
+            width: 100%; padding: 12px 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 1rem; font-family: monospace;
+        }
+        input[type="text"]:focus { outline: none; border-color: #58a6ff; }
+
+        .field-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 12px; }
+        .field-cell { display: flex; flex-direction: column; gap: 4px; }
+        .field-cell label { font-size: 0.75rem; color: #8b949e; text-align: center; }
+        .field-cell input { font-size: 0.9rem; padding: 8px 6px; text-align: center; }
+        .with-sec { grid-template-columns: repeat(6, 1fr) !important; }
+
+        .sec-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #8b949e; margin-top: 10px; cursor: pointer; }
+        .sec-toggle input { cursor: pointer; }
+
+        .preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+        .preset-btn {
+            padding: 6px 12px; background: #21262d; border: 1px solid #30363d;
+            color: #79c0ff; border-radius: 6px; cursor: pointer;
+            font-size: 0.78rem; font-family: monospace; transition: all 0.2s;
+        }
+        .preset-btn:hover { border-color: #58a6ff; background: #30363d; }
+        .preset-name { color: #8b949e; font-family: 'Segoe UI', sans-serif; }
+
+        .desc-box {
+            padding: 14px 16px; background: #0d1117; border-radius: 8px;
+            font-size: 0.9rem; line-height: 1.8;
+        }
+        .desc-box .d { color: #a5d6ff; }
+        .status-ok { color: #2ea043; font-size: 0.85rem; margin-top: 10px; }
+        .status-error { color: #da3633; font-size: 0.85rem; margin-top: 10px; }
+
+        .run-list { display: grid; gap: 8px; }
+        .run-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px; background: #0d1117; border-radius: 8px;
+            font-family: monospace; font-size: 0.9rem;
+        }
+        .run-idx { color: #484f58; font-size: 0.78rem; min-width: 20px; }
+        .run-time { color: #79c0ff; }
+        .run-weekday { color: #8b949e; font-size: 0.8rem; margin-left: auto; font-family: 'Segoe UI', sans-serif; }
+
+        .info-box { padding: 16px; background: #0d1117; border-radius: 8px; font-size: 0.85rem; color: #8b949e; line-height: 1.6; }
+        .info-box code { background: #21262d; padding: 2px 6px; border-radius: 4px; color: #79c0ff; font-size: 0.8rem; }
+        .info-box strong { color: #e6edf3; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            .field-grid { grid-template-columns: repeat(3, 1fr); }
+            .with-sec { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>⏲️ Cron 表达式解析器</h1>
+        <p class="subtitle">解析 cron 表达式 · 查看字段含义 · 计算未来执行时间</p>
+
+        <div class="card">
+            <div class="card-title">📝 表达式输入</div>
+            <input type="text" id="exprInput" value="*/5 * * * *" oninput="parseAndShow()" placeholder="例如: */5 * * * *">
+            <label class="sec-toggle"><input type="checkbox" id="secToggle" onchange="toggleSec()"> 启用秒字段（6 段格式）</label>
+
+            <div class="preset-row">
+                <button class="preset-btn" onclick="loadPreset('*/5 * * * *')">*/5 * * * * <span class="preset-name">每5分钟</span></button>
+                <button class="preset-btn" onclick="loadPreset('0 9 * * 1-5')">0 9 * * 1-5 <span class="preset-name">工作日9点</span></button>
+                <button class="preset-btn" onclick="loadPreset('30 20 * * *')">30 20 * * * <span class="preset-name">每天20:30</span></button>
+                <button class="preset-btn" onclick="loadPreset('0 0 1 * *')">0 0 1 * * <span class="preset-name">每月1日</span></button>
+                <button class="preset-btn" onclick="loadPreset('0 12 * 1 0')">0 12 * 1 0 <span class="preset-name">1月每周日</span></button>
+            </div>
+            <div id="status"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔍 字段说明</div>
+            <div class="field-grid" id="fieldGrid">
+                <div class="field-cell"><label>分钟 (0-59)</label><input type="text" id="fMin" value="*/5" onchange="parseAndShow()"></div>
+                <div class="field-cell"><label>小时 (0-23)</label><input type="text" id="fHour" value="*" onchange="parseAndShow()"></div>
+                <div class="field-cell"><label>日 (1-31)</label><input type="text" id="fDom" value="*" onchange="parseAndShow()"></div>
+                <div class="field-cell"><label>月 (1-12)</label><input type="text" id="fMon" value="*" onchange="parseAndShow()"></div>
+                <div class="field-cell"><label>周 (0-6, 0=周日)</label><input type="text" id="fDow" value="*" onchange="parseAndShow()"></div>
+            </div>
+            <div class="desc-box" id="descBox" style="margin-top:14px"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📅 未来 5 次执行时间（本地时区）</div>
+            <div class="run-list" id="runList"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">ℹ️ 语法参考</div>
+            <div class="info-box">
+                <p><code>* * * * *</code> 分别对应 <strong>分钟 小时 日 月 周</strong>（可加秒成为 6 段）。</p>
+                <br>
+                <p>• <code>*</code> 任意值　• <code>*/5</code> 每 5 个单位　• <code>1-5</code> 范围　• <code>1,15,30</code> 列表　• <code>1-10/2</code> 范围步长</p>
+                <p>• 周字段：<code>0</code> 或 <code>7</code> 均为周日，支持 <code>SUN-SAT</code> 名称</p>
+                <p>• 月字段支持 <code>JAN-DEC</code> 名称</p>
+                <p>• 当「日」和「周」同时受限时，满足<strong>任意一个</strong>即触发（OR 语义）</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const MONTH_NAMES = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+        const DOW_NAMES = { sun:0, mon:1, tue:2, web:3, wed:3, thu:4, fri:5, sat:6 };
+        const DOW_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+        function nameVal(t, nameMap, min, max) {
+            if (nameMap && nameMap[t] !== undefined) return nameMap[t];
+            if (/^\d+$/.test(t)) {
+                const n = +t;
+                if (n < min || n > max) throw new Error('数值 ' + t + ' 超出范围 ' + min + '-' + max);
+                return n;
+            }
+            throw new Error('无法识别的值: ' + t);
+        }
+
+        // 纯逻辑（可测试）
+        function parseField(raw, min, max, nameMap) {
+            const field = String(raw).trim().toLowerCase();
+            const values = new Set();
+            const desc = [];
+            const isStar = field === '*';
+            for (const p of field.split(',')) {
+                if (!p) throw new Error('存在空的分段: "' + raw + '"');
+                let m;
+                if (p === '*') {
+                    for (let i = min; i <= max; i++) values.add(i);
+                    desc.push('任意');
+                } else if ((m = p.match(/^\*\/(\d+)$/))) {
+                    const step = +m[1];
+                    if (step < 1) throw new Error('步长无效: ' + p);
+                    for (let i = min; i <= max; i += step) values.add(i);
+                    desc.push('每' + step + '个');
+                } else if ((m = p.match(/^(\w+)-(\w+)(?:\/(\d+))?$/))) {
+                    const a = nameVal(m[1], nameMap, min, max);
+                    const b = nameVal(m[2], nameMap, min, max);
+                    if (a > b) throw new Error('范围起始大于结束: ' + p);
+                    const step = m[3] ? +m[3] : 1;
+                    for (let i = a; i <= b; i += step) values.add(i);
+                    desc.push(step === 1 ? a + '-' + b : a + '-' + b + '步' + step);
+                } else if (/^\w+$/.test(p)) {
+                    const v = nameVal(p, nameMap, min, max);
+                    values.add(v);
+                    desc.push(String(v));
+                } else {
+                    throw new Error('无法识别的分段: "' + p + '"');
+                }
+            }
+            return { values: values, desc: desc.join('、'), isStar: isStar };
+        }
+
+        function parseCron(expr) {
+            const out = { ok: false, error: '', spec: null, description: '' };
+            const fields = String(expr).trim().split(/\s+/);
+            if (fields.length === 5) {
+                const [min, hour, dom, mon, dow] = fields;
+                let spec;
+                try {
+                    spec = {
+                        sec: null,
+                        min: parseField(min, 0, 59, null),
+                        hour: parseField(hour, 0, 23, null),
+                        dom: parseField(dom, 1, 31, null),
+                        mon: parseField(mon, 1, 12, MONTH_NAMES),
+                        dow: parseDow(dow)
+                    };
+                } catch (e) {
+                    out.error = e.message;
+                    return out;
+                }
+                out.spec = spec;
+                out.ok = true;
+            } else if (fields.length === 6) {
+                const [sec, min, hour, dom, mon, dow] = fields;
+                let spec;
+                try {
+                    spec = {
+                        sec: parseField(sec, 0, 59, null),
+                        min: parseField(min, 0, 59, null),
+                        hour: parseField(hour, 0, 23, null),
+                        dom: parseField(dom, 1, 31, null),
+                        mon: parseField(mon, 1, 12, MONTH_NAMES),
+                        dow: parseDow(dow)
+                    };
+                } catch (e) {
+                    out.error = e.message;
+                    return out;
+                }
+                out.spec = spec;
+                out.ok = true;
+            } else {
+                out.error = '需要 5 段（分 时 日 月 周）或 6 段（含秒）表达式，当前 ' + fields.length + ' 段';
+                return out;
+            }
+            const s = out.spec;
+            out.description = '执行时间：' +
+                (s.sec ? '秒 [' + s.sec.desc + ']，' : '') +
+                '分钟 [' + s.min.desc + ']，小时 [' + s.hour.desc + ']，日 [' + s.dom.desc + ']，月 [' + s.mon.desc + ']，周 [' + s.dow.desc + ']';
+            return out;
+        }
+
+        function parseDow(raw) {
+            const field = String(raw).trim().toLowerCase();
+            // 把 7 归一为 0（周日）
+            const normalized = field.replace(/\b7\b/g, '0');
+            const r = parseField(normalized, 0, 6, DOW_NAMES);
+            const labels = [];
+            const sorted = [...r.values].sort((a, b) => a - b);
+            r.desc = sorted.length === 7 ? '任意' : sorted.map(v => DOW_LABELS[v]).join('、');
+            return r;
+        }
+
+        // 计算未来执行时间（纯逻辑，可测试）
+        function nextRuns(spec, from) {
+            const count = 5;
+            const results = [];
+            const start = new Date(from);
+            const ref = new Date(start);
+            ref.setSeconds(0, 0);
+            ref.setMinutes(ref.getMinutes() + 1);
+            const hours = [...spec.hour.values].sort((a, b) => a - b);
+            const mins = [...spec.min.values].sort((a, b) => a - b);
+            const secs = spec.sec ? [...spec.sec.values].sort((a, b) => a - b) : [0];
+
+            for (let day = 0; day <= 1461 && results.length < count; day++) {
+                const d0 = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() + day);
+                if (!spec.mon.values.has(d0.getMonth() + 1)) continue;
+                const domOk = spec.dom.values.has(d0.getDate());
+                const dowOk = spec.dow.values.has(d0.getDay());
+                const bothRestricted = !spec.dom.isStar && !spec.dow.isStar;
+                const dayOk = bothRestricted ? (domOk || dowOk) : (domOk && dowOk);
+                if (!dayOk) continue;
+                for (const h of hours) {
+                    if (results.length >= count) break;
+                    if (day === 0 && h < ref.getHours()) continue;
+                    for (const mi of mins) {
+                        if (results.length >= count) break;
+                        if (day === 0 && h === ref.getHours() && mi < ref.getMinutes()) continue;
+                        for (const s of secs) {
+                            if (results.length >= count) break;
+                            results.push(new Date(d0.getFullYear(), d0.getMonth(), d0.getDate(), h, mi, s));
+                        }
+                    }
+                }
+            }
+            return results;
+        }
+
+        function fmtRun(d) {
+            const p = n => String(n).padStart(2, '0');
+            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+                ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+        }
+
+        function loadPreset(expr) {
+            document.getElementById('exprInput').value = expr;
+            const f = expr.split(/\s+/);
+            const base = f.length === 6 ? f.slice(1) : f;
+            document.getElementById('fMin').value = base[0];
+            document.getElementById('fHour').value = base[1];
+            document.getElementById('fDom').value = base[2];
+            document.getElementById('fMon').value = base[3];
+            document.getElementById('fDow').value = base[4];
+            parseAndShow();
+        }
+
+        function toggleSec() {
+            const on = document.getElementById('secToggle').checked;
+            const grid = document.getElementById('fieldGrid');
+            if (on && !grid.querySelector('#fSec')) {
+                const cell = document.createElement('div');
+                cell.className = 'field-cell';
+                cell.innerHTML = '<label>秒 (0-59)</label><input type="text" id="fSec" value="0" onchange="parseAndShow()">';
+                grid.insertBefore(cell, grid.firstChild);
+            } else if (!on) {
+                const el = document.getElementById('fSec');
+                if (el) el.closest('.field-cell').remove();
+            }
+            grid.classList.toggle('with-sec', on);
+            parseAndShow();
+        }
+
+        function parseAndShow() {
+            // 以完整表达式为准（若字段框被单独编辑，则拼回表达式）
+            let expr = document.getElementById('exprInput').value;
+            const on = document.getElementById('secToggle').checked;
+            const hasSec = !!document.getElementById('fSec');
+            if (hasSec !== on) toggleSec();
+            expr = [
+                document.getElementById('fSec') ? document.getElementById('fSec').value : null,
+                document.getElementById('fMin').value,
+                document.getElementById('fHour').value,
+                document.getElementById('fDom').value,
+                document.getElementById('fMon').value,
+                document.getElementById('fDow').value
+            ].filter(v => v !== null).join(' ');
+            document.getElementById('exprInput').value = expr;
+
+            const statusEl = document.getElementById('status');
+            const descBox = document.getElementById('descBox');
+            const runList = document.getElementById('runList');
+
+            const r = parseCron(expr);
+            if (!r.ok) {
+                statusEl.innerHTML = '<div class="status-error">❌ ' + r.error + '</div>';
+                descBox.innerHTML = '';
+                runList.innerHTML = '';
+                return;
+            }
+
+            statusEl.innerHTML = '<div class="status-ok">✓ 表达式有效</div>';
+            descBox.innerHTML = '<span class="d">' + r.description + '</span>';
+
+            const runs = nextRuns(r.spec, new Date());
+            runList.innerHTML = runs.map(function(d, i) {
+                return '<div class="run-item">' +
+                    '<span class="run-idx">#' + (i + 1) + '</span>' +
+                    '<span class="run-time">' + fmtRun(d) + '</span>' +
+                    '<span class="run-weekday">' + DOW_LABELS[d.getDay()] + '</span></div>';
+            }).join('') || '<div style="color:#8b949e">未来 4 年内没有匹配的执行时间</div>';
+        }
+
+        parseAndShow();
+    </script>
+</body>
+</html>

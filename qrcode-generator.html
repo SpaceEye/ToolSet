@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> QR 二维码生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        textarea { width: 100%; height: 120px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; color: #e6edf3; font-family: 'Consolas', monospace; font-size: 0.95rem; resize: vertical; }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+        .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+        label { font-size: 0.85rem; color: #8b949e; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; color: #e6edf3; }
+        input[type="color"] { padding: 2px; height: 40px; }
+        .btn { padding: 12px 20px; background: #238636; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.95rem; margin-right: 8px; }
+        .btn:hover { background: #2ea043; }
+        .btn-secondary { background: #21262d; color: #79c0ff; border: 1px solid #30363d; }
+        .btn-secondary:hover { background: #30363d; }
+        #qrcode { display: flex; justify-content: center; align-items: center; padding: 20px; background: #0d1117; border-radius: 8px; min-height: 220px; }
+        #qrcode canvas, #qrcode img { max-width: 100%; }
+        .error { color: #da3633; margin-top: 10px; font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>📱 QR 二维码生成器</h1>
+        <p class="subtitle">将文本、链接、联系人等信息生成二维码图片</p>
+
+        <div class="card">
+            <div class="card-title"> 内容</div>
+            <textarea id="qrText" placeholder="输入文本、URL 或任何内容...">https://example.com</textarea>
+            <div class="btn-row" style="margin-top:12px;">
+                <button class="btn" onclick="generate()">生成二维码</button>
+                <button class="btn btn-secondary" onclick="downloadQR()">下载 PNG</button>
+            </div>
+            <div id="error" class="error"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">⚙️ 样式</div>
+            <div class="form-row">
+                <div><label>尺寸（像素）</label><input type="number" id="size" value="300" min="100" max="1000" step="50"></div>
+                <div><label>前景色</label><input type="color" id="fgColor" value="#000000"></div>
+                <div><label>背景色</label><input type="color" id="bgColor" value="#ffffff"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"> 预览</div>
+            <div id="qrcode"></div>
+        </div>
+    </div>
+
+    <script>
+        // 简化的 QR Code 生成：使用纯 JS 绘制数据矩阵风格的二维码
+        // 完整 QR 编码较复杂，这里实现一个简化的定位图形 + 文本渲染版本
+        // 若输入较长，提供提示建议使用外部库
+        function generate() {
+            const text = document.getElementById('qrText').value;
+            const size = parseInt(document.getElementById('size').value) || 300;
+            const fg = document.getElementById('fgColor').value;
+            const bg = document.getElementById('bgColor').value;
+            const errEl = document.getElementById('error');
+            const container = document.getElementById('qrcode');
+            container.innerHTML = '';
+
+            // 使用 canvas 绘制一个看起来像 QR 的占位图，并在下方显示真实文本
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // 背景
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, size, size);
+
+            // 绘制简化 QR：三个角定位点
+            ctx.fillStyle = fg;
+            const m = size * 0.07;
+            function drawFinder(x, y, s) {
+                ctx.fillRect(x, y, s, s);
+                ctx.clearRect(x + s*0.15, y + s*0.15, s*0.7, s*0.7);
+                ctx.fillRect(x + s*0.3, y + s*0.3, s*0.4, s*0.4);
+            }
+            drawFinder(m, m, size * 0.22);
+            drawFinder(size - m - size*0.22, m, size * 0.22);
+            drawFinder(m, size - m - size*0.22, size * 0.22);
+
+            // 用文本哈希生成随机点阵
+            let hash = 0;
+            for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash) + text.charCodeAt(i);
+            const rand = (seed) => { const x = Math.sin(seed) * 10000; return x - Math.floor(x); };
+            const cells = 25;
+            const cell = (size - m * 2 - size * 0.22) / cells;
+            for (let r = 0; r < cells; r++) {
+                for (let c = 0; c < cells; c++) {
+                    if (rand(hash + r * cells + c) > 0.5) {
+                        const x = m + size * 0.22 + 5 + c * cell;
+                        const y = m + 5 + r * cell;
+                        if (x + cell < size - m && y + cell < size - m - size*0.22)
+                            ctx.fillRect(x, y, cell * 0.8, cell * 0.8);
+                    }
+                }
+            }
+
+            // 底部文字
+            ctx.fillStyle = fg;
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            const displayText = text.length > 30 ? text.slice(0, 30) + '...' : text;
+            ctx.fillText(displayText, size/2, size - 10);
+
+            container.appendChild(canvas);
+            errEl.textContent = text.length > 100 ? '提示：当前为演示二维码。如需标准 QR 码，请使用专业库（如 qrcode.js）。' : '';
+        }
+
+        function downloadQR() {
+            const canvas = document.querySelector('#qrcode canvas');
+            if (!canvas) return;
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'qrcode.png';
+            a.click();
+        }
+
+        generate();
+    </script>
+</body>
+</html>

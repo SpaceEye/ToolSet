@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📏 CSS 单位转换器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .form-row { display: grid; grid-template-columns: 1fr 80px 1fr 1fr; gap: 12px; align-items: center; margin-bottom: 16px; }
+        label { font-size: 0.85rem; color: #8b949e; }
+        input, select { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; color: #e6edf3; font-family: 'Consolas', monospace; }
+        input:focus, select:focus { outline: none; border-color: #58a6ff; }
+        .full { grid-column: 1 / -1; }
+        .result { background: #0d1117; border-radius: 8px; padding: 16px; font-family: 'Consolas', monospace; font-size: 1rem; color: #79c0ff; text-align: center; }
+        .formula { font-size: 0.85rem; color: #8b949e; margin-top: 8px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>📏 CSS 单位转换器</h1>
+        <p class="subtitle">在 px / rem / em / % / vw / vh 等常见 CSS 单位之间快速换算</p>
+
+        <div class="card">
+            <div class="card-title">⚙️ 参数设置</div>
+            <div class="form-row">
+                <div><label>基准字号（根元素，用于 rem / % 计算）</label><input type="number" id="rootSize" value="16" step="0.1"></div>
+                <div style="align-self: flex-end;"><label style="visibility:hidden">单位</label><input type="text" value="px" disabled></div>
+                <div><label>父元素字号（用于 em 计算）</label><input type="number" id="parentSize" value="16" step="0.1"></div>
+                <div style="align-self: flex-end;"><label style="visibility:hidden">单位</label><input type="text" value="px" disabled></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔄 转换</div>
+            <div class="form-row">
+                <div><label>数值</label><input type="number" id="value" value="16" step="any" oninput="convert()"></div>
+                <div><label>单位</label><select id="fromUnit" onchange="convert()">
+                    <option value="px">px</option>
+                    <option value="rem">rem</option>
+                    <option value="em">em</option>
+                    <option value="percent">%</option>
+                    <option value="vw">vw</option>
+                    <option value="vh">vh</option>
+                    <option value="pt">pt</option>
+                    <option value="cm">cm</option>
+                    <option value="mm">mm</option>
+                    <option value="in">in</option>
+                </select></div>
+                <div style="text-align: center; color: #8b949e;">=</div>
+                <div><label>目标单位</label><select id="toUnit" onchange="convert()">
+                    <option value="rem">rem</option>
+                    <option value="px" selected>px</option>
+                    <option value="em">em</option>
+                    <option value="percent">%</option>
+                    <option value="vw">vw</option>
+                    <option value="vh">vh</option>
+                    <option value="pt">pt</option>
+                    <option value="cm">cm</option>
+                    <option value="mm">mm</option>
+                    <option value="in">in</option>
+                </select></div>
+            </div>
+            <div class="result" id="result">16 px = 1 rem</div>
+            <div class="formula" id="formula">基于根字号 16 px 计算</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">ℹ️ 参考</div>
+            <p style="font-size: 0.85rem; color: #8b949e; line-height: 1.6;">
+                • px 是绝对像素；rem 相对于根元素字号；em 相对于父元素字号。<br>
+                • % 在本工具中视为相对于父元素字号（与 em 相同，16px = 100%）。<br>
+                • vw / vh 默认按视口 1920 x 1080 计算，实际取决于设计稿尺寸。<br>
+                • 1 in = 96 px = 72 pt = 2.54 cm。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const VIEWPORT_W = 1920;
+        const VIEWPORT_H = 1080;
+        const DPI = 96;
+
+        function toPx(value, unit, rootPx, parentPx) {
+            switch (unit) {
+                case 'px': return value;
+                case 'rem': return value * rootPx;
+                case 'em': return value * parentPx;
+                case 'percent': return value / 100 * parentPx;
+                case 'vw': return value / 100 * VIEWPORT_W;
+                case 'vh': return value / 100 * VIEWPORT_H;
+                case 'pt': return value / 72 * DPI;
+                case 'cm': return value / 2.54 * DPI;
+                case 'mm': return value / 25.4 * DPI;
+                case 'in': return value * DPI;
+                default: return value;
+            }
+        }
+
+        function fromPx(px, unit, rootPx, parentPx) {
+            switch (unit) {
+                case 'px': return px;
+                case 'rem': return px / rootPx;
+                case 'em': return px / parentPx;
+                case 'percent': return px / parentPx * 100;
+                case 'vw': return px / VIEWPORT_W * 100;
+                case 'vh': return px / VIEWPORT_H * 100;
+                case 'pt': return px / DPI * 72;
+                case 'cm': return px / DPI * 2.54;
+                case 'mm': return px / DPI * 25.4;
+                case 'in': return px / DPI;
+                default: return px;
+            }
+        }
+
+        function convert() {
+            const value = parseFloat(document.getElementById('value').value);
+            const fromUnit = document.getElementById('fromUnit').value;
+            const toUnit = document.getElementById('toUnit').value;
+            const rootPx = parseFloat(document.getElementById('rootSize').value) || 16;
+            const parentPx = parseFloat(document.getElementById('parentSize').value) || 16;
+
+            if (isNaN(value)) {
+                document.getElementById('result').textContent = '请输入有效数值';
+                document.getElementById('formula').textContent = '';
+                return;
+            }
+
+            const px = toPx(value, fromUnit, rootPx, parentPx);
+            const result = fromPx(px, toUnit, rootPx, parentPx);
+
+            let display = result;
+            if (!Number.isInteger(result)) display = parseFloat(result.toFixed(6));
+
+            document.getElementById('result').textContent = value + ' ' + fromUnit + ' = ' + display + ' ' + toUnit;
+            document.getElementById('formula').textContent = '中间值：' + parseFloat(px.toFixed(4)) + ' px，基于根字号 ' + rootPx + ' px';
+        }
+
+        document.getElementById('rootSize').addEventListener('input', convert);
+        document.getElementById('parentSize').addEventListener('input', convert);
+        convert();
+    </script>
+</body>
+</html>

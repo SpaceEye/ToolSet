@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 游戏工具箱</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:900px;margin:0 auto}
+h1{text-align:center;margin-bottom:8px;font-size:2rem;color:#a371f7}
+.subtitle{text-align:center;color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+.row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+input,select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;transition:all .2s}
+input:focus,select:focus{outline:none;border-color:#a371f7;box-shadow:0 0 0 3px rgba(163,113,247,.15)}
+textarea{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;font-family:monospace;resize:vertical;transition:all .2s}
+textarea:focus{outline:none;border-color:#a371f7}
+.btn{background:#238636;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.95rem;cursor:pointer;transition:all .2s}
+.btn:hover{background:#2ea043}
+.btn-secondary{background:#21262d;color:#e6edf3;border:1px solid #30363d}
+.btn-secondary:hover{background:#30363d;border-color:#8b949e}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px}
+.result-item{background:#0d1117;border-radius:8px;padding:16px;text-align:center}
+.result-item .val{font-size:1.8rem;font-weight:bold;color:#a371f7;margin:8px 0}
+.result-item .lbl{color:#8b949e;font-size:.8rem}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #21262d}
+th{color:#8b949e;font-size:.8rem;font-weight:normal}
+td{color:#e6edf3;font-size:.9rem}
+tr:hover td{background:rgba(163,113,247,.05)}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+.game-section{color:#8b949e;font-size:1.1rem;margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid #21262d}
+@media(max-width:600px){body{padding:20px}.row{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🎮 游戏工具箱</h1>
+<p class="subtitle">Minecraft · League of Legends · Valorant · FPS 通用工具</p>
+
+<!-- Minecraft -->
+<div class="game-section">⛏️ Minecraft 相关</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">经验值计算器 🟢</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">计算从当前等级到目标等级需要的总经验值（按 MCBBS 标准 XP 表）</p>
+<div class="row">
+<div style="flex:1"><label>起始等级</label><input type="number" id="mcStartLevel" value="0" min="0" max="100"></div>
+<div style="flex:1"><label>目标等级</label><input type="number" id="mcEndLevel" value="30" min="1" max="100"></div>
+</div>
+<button class="btn" onclick="calcExp()">计算</button>
+<div id="expResult"></div>
+</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">附魔成本查询 🔮</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">查看每个等级的附魔经验需求</p>
+<table>
+<thead><tr><th>等级</th><th>升级所需XP</th><th>累计XP</th></tr></thead>
+<tbody id="enchantTable"></tbody>
+</table>
+</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">红石时钟计算器 ⏱️</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">根据红石元件数量计算循环周期</p>
+<div class="row">
+<div style="flex:1"><label>红石比较器数量</label><input type="number" id="compCount" value="1" min="1" max="50"></div>
+<div style="flex:1"><label>类型</label>
+<select id="clockType">
+<option value="normal">普通时钟 (1 tick)</option>
+<option value="sub">亚脉冲时钟 (0.5 tick)</option>
+<option value="fast">快速时钟 (2 ticks)</option>
+</select></div>
+</div>
+<button class="btn" onclick="calcRedstone()">计算</button>
+<div id="redstoneResult"></div>
+</div>
+
+<!-- LoL -->
+<div class="game-section">🏆 League of Legends 相关</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">KDA 计算器 📊</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">计算击杀/死亡/助攻比值</p>
+<div class="row">
+<div style="flex:1"><label>击杀 (K)</label><input type="number" id="kdaK" value="0" min="0"></div>
+<div style="flex:1"><label>死亡 (D)</label><input type="number" id="kdaD" value="0" min="0"></div>
+<div style="flex:1"><label>助攻 (A)</label><input type="number" id="kdaA" value="0" min="0"></div>
+</div>
+<button class="btn" onclick="calcKDA()">计算 KDA</button>
+<div id="kdaResult"></div>
+</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">技能冷却时间计算器 ⚡</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">根据基础CD和缩减百分比计算实际冷却</p>
+<div class="row">
+<div style="flex:1"><label>基础冷却秒数</label><input type="number" id="baseCD" value="10" step="0.1" min="0"></div>
+<div style="flex:1"><label>CDR (%)</label><input type="number" id="cdr" value="40" min="0" max="40"></div>
+</div>
+<button class="btn" onclick="calcCD()">计算</button>
+<div id="cdResult"></div>
+</div>
+
+<!-- Valorant -->
+<div class="game-section">🔫 Valorant / FPS 相关</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">跨射伤量分析 💀</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">计算穿墙后的子弹伤害衰减</p>
+<div class="row">
+<div style="flex:1"><label>穿越墙体数</label>
+<select id="wallsCrossed">
+<option value="0">0 面墙 (不衰减)</option>
+<option value="1" selected>1 面墙 (-20%)</option>
+<option value="2">2 面墙 (-40%)</option>
+<option value="3">3 面墙 (-60%)</option>
+<option value="4">4 面墙 (-80%)</option>
+</select></div>
+<div style="flex:1"><label>射击距离</label>
+<select id="distSelect">
+<option value="close">近距离 (&lt; 15m)</option>
+<option value="mid" selected>中距离 (15-50m)</option>
+<option value="far">远距离 (&gt; 50m)</option>
+</select></div>
+</div>
+<div class="row">
+<div style="flex:1"><label>武器</label>
+<select id="weaponSelect">
+<option value="phantom">Phantom</option>
+<option value="vandal">Vandal</option>
+<option value="shorty">Shorty</option>
+<option value="sova">Sova Op.</option>
+</select></div>
+</div>
+<button class="btn" onclick="calcPen()">计算剩余伤害</button>
+<div id="penResult"></div>
+</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">经济计算器 💰</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">根据存活/击杀/回合输赢预测下一回合资金</p>
+<div class="row">
+<div style="flex:1"><label>当前资金</label><input type="number" id="currMoney" value="800"></div>
+<div style="flex:1"><label>上回合结果</label>
+<select id="roundResult">
+<option value="win">获胜</option>
+<option value="lose">失败</option>
+<option value="loss_bonus">连败奖励</option>
+</select></div>
+</div>
+<div class="row">
+<div style="flex:1"><label>是否连续存活(购买除外)</label>
+<select id="survived">
+<option value="yes">是</option>
+<option value="no">否</option>
+</select></div>
+</div>
+<button class="btn" onclick="calcEco()">计算下回合资金</button>
+<div id="ecoResult"></div>
+</div>
+
+<!-- Crosshair -->
+<div class="game-section">🎯 通用 FPS 准星生成器</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">自定义准星生成器 🖱️</h2>
+<div class="row">
+<div style="flex:1"><label>准星颜色</label>
+<input type="color" id="crossColor" value="#00ff00" style="height:40px;padding:4px"></div>
+<div style="flex:1"><label>中心点间隙(px)</label><input type="number" id="gapSize" value="8" min="0" max="50"></div>
+<div style="flex:1"><label>线条粗细(px)</label><input type="number" id="lineWidth" value="2" min="1" max="10"></div>
+<div style="flex:1"><label>准星长度(px)</label><input type="number" id="crossLength" value="20" min="5" max="100"></div>
+</div>
+<div class="row">
+<label style="display:flex;align-items:center;gap:8px">
+<input type="checkbox" id="showDot"> 显示中心点
+</label>
+<label style="display:flex;align-items:center;gap:8px">
+<input type="checkbox" id="showOutlines"> 显示轮廓
+</label>
+</div>
+<div id="crossPreview" style="text-align:center;padding:30px;background:#111;border-radius:8px;margin-bottom:16px"></div>
+<button class="btn" onclick="generateCSS()">生成 SVG 代码</button>
+<button class="btn btn-secondary" onclick="copyCrosshair()" style="margin-left:8px">复制</button>
+<div id="cssOutput" style="margin-top:12px"></div>
+</div>
+
+<!-- Tier List -->
+<div class="game-section">📋 排行榜编辑器</div>
+
+<div class="card">
+<h2 style="color:#e6edf3;margin-bottom:16px">T0-T5 排行榜编辑器</h2>
+<p style="color:#8b949e;font-size:.85rem;margin-bottom:16px">输入角色名分配到不同 T 级（适用于任何游戏）</p>
+<div id="tierEditor">
+<div class="row" style="align-items:start">
+<div style="width:80px;padding:8px 12px;border-radius:6px;text-align:center;font-weight:bold;color:#fff;background:#ff7b72">T0</div>
+<div style="flex:1"><textarea rows="3" placeholder="每行一个角色名..." class="tier-input" data-tier="T0" oninput="autoBuildTierList()"></textarea></div>
+</div>
+<div class="row" style="align-items:center">
+<div style="width:80px;padding:8px 12px;border-radius:6px;text-align:center;font-weight:bold;color:#000;background:#ffa657">T1</div>
+<div style="flex:1"><textarea rows="3" placeholder="..." class="tier-input" data-tier="T1" oninput="autoBuildTierList()"></textarea></div>
+</div>
+<div class="row" style="align-items:center">
+<div style="width:80px;padding:8px 12px;border-radius:6px;text-align:center;font-weight:bold;color:#000;background:#d29922">T2</div>
+<div style="flex:1"><textarea rows="3" placeholder="..." class="tier-input" data-tier="T2" oninput="autoBuildTierList()"></textarea></div>
+</div>
+<div class="row" style="align-items:center">
+<div style="width:80px;padding:8px 12px;border-radius:6px;text-align:center;font-weight:bold;color:#000;background:#e3b341">T3</div>
+<div style="flex:1"><textarea rows="3" placeholder="..." class="tier-input" data-tier="T3" oninput="autoBuildTierList()"></textarea></div>
+</div>
+<div class="row" style="align-items:center">
+<div style="width:80px;padding:8px 12px;border-radius:6px;text-align:center;font-weight:bold;color:#000;background:#7eb062">T4</div>
+<div style="flex:1"><textarea rows="3" placeholder="..." class="tier-input" data-tier="T4" oninput="autoBuildTierList()"></textarea></div>
+</div>
+<div class="row" style="align-items:center">
+<div style="width:80px;padding:8px 12px;border-radius:6px;text-align:center;font-weight:bold;color:#fff;background:#6e7681">T5</div>
+<div style="flex:1"><textarea rows="3" placeholder="..." class="tier-input" data-tier="T5" oninput="autoBuildTierList()"></textarea></div>
+</div>
+</div>
+<div id="tierPreview" style="margin-top:16px"></div>
+<button class="btn" onclick="exportTierList()">导出为文本格式</button>
+</div>
+
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+
+<script>
+// Minecraft XP Calculator (MCBBS standard)
+function mcXP(lvl) {
+    if (lvl <= 16) return lvl * lvl + 6 * lvl;
+    if (lvl <= 31) return Math.floor(2.5 * lvl * lvl - 40.5 * lvl + 360);
+    return Math.floor(4.5 * lvl * lvl - 162.5 * lvl + 2220);
+}
+
+function calcExp() {
+    var s = parseInt(document.getElementById('mcStartLevel').value) || 0;
+    var e = parseInt(document.getElementById('mcEndLevel').value) || 30;
+    if (e <= s) {
+        document.getElementById('expResult').innerHTML = '<p style="color:#f85149">目标等级必须大于起始等级</p>';
+        return;
+    }
+    var total = mcXP(e) - mcXP(s);
+    var avg = Math.floor(total / (e - s));
+    var h = '<div class="result-grid">';
+    h += '<div class="result-item"><div class="lbl">' + s + '→' + e + ' 级</div><div class="val">' + total + '</div><div class="lbl">总经验值</div></div>';
+    h += '<div class="result-item"><div class="lbl">平均</div><div class="val">' + avg + '</div><div class="lbl">每级所需XP</div></div>';
+    h += '</div>';
+    h += '<details style="margin-top:16px"><summary style="color:#8b949e;cursor:pointer;user-select:none">展开详情 →</summary><table><thead><tr><th>等级</th><th>本升级需XP</th></tr></thead><tbody>';
+    for (var i = s; i < e; i++) {
+        h += '<tr><td>' + i + '→' + (i+1) + '</td><td>' + (mcXP(i+1) - mcXP(i)) + '</td></tr>';
+    }
+    h += '</tbody></details>';
+    document.getElementById('expResult').innerHTML = h;
+}
+
+// Enchant Table
+(function buildEnchantTable() {
+    var t = document.getElementById('enchantTable');
+    var h = '';
+    var cumXP = 0;
+    for (var i = 1; i <= 50; i++) {
+        var prevXP = i > 1 ? mcXP(i - 1) : 0;
+        var lvlXP = mcXP(i) - prevXP;
+        cumXP += lvlXP;
+        h += '<tr><td>' + i + '</td><td>' + lvlXP + '</td><td>' + cumXP + '</td></tr>';
+    }
+    t.innerHTML = h;
+})();
+
+// Redstone Clock
+function calcRedstone() {
+    var n = parseInt(document.getElementById('compCount').value) || 1;
+    var type = document.getElementById('clockType').value;
+    var tick = type === 'sub' ? 0.5 : type === 'fast' ? 2 : 1;
+    var period = n * tick;
+    var ms = period * 50;
+    var desc = n + ' 个比较器, 每周期 ' + tick.toFixed(1) + ' tick<br>循环周期: ' + period.toFixed(1) + ' tick (' + ms + 'ms)';
+    if (ms >= 1000) desc += ' (' + (ms / 1000).toFixed(2) + 's)';
+    else if (ms >= 1 && period % 1 !== 0) desc += '<br>频率: ' + (1000 / ms).toFixed(1) + ' Hz';
+    document.getElementById('redstoneResult').innerHTML = '<div class="result-item" style="margin-top:16px"><div class="lbl">结果</div><div class="val" style="font-size:1rem">' + desc + '</div></div>';
+}
+
+// KDA
+function calcKDA() {
+    var k = parseInt(document.getElementById('kdaK').value) || 0;
+    var d = parseInt(document.getElementById('kdaD').value) || 0;
+    var a = parseInt(document.getElementById('kdaA').value) || 0;
+    var ratio;
+    if (d === 0) ratio = k + a === 0 ? '—' : '∞';
+    else ratio = ((k + a) / d).toFixed(2);
+    document.getElementById('kdaResult').innerHTML =
+        '<div class="result-grid">' +
+        '<div class="result-item"><div class="lbl">K+D+A</div><div class="val">' + (k + a) + '</div></div>' +
+        '<div class="result-item"><div class="lbl">KDA Ratio</div><div class="val">' + ratio + '</div></div>' +
+        '</div>';
+}
+
+// CD Calculator
+function calcCD() {
+    var base = parseFloat(document.getElementById('baseCD').value) || 0;
+    var cdr = Math.min(Math.max(parseFloat(document.getElementById('cdr').value) || 0, 0), 40);
+    var actual = base * (1 - cdr / 100);
+    var reduced = base - actual;
+    document.getElementById('cdResult').innerHTML =
+        '<div class="result-grid">' +
+        '<div class="result-item"><div class="lbl">基础冷却</div><div class="val">' + base + 's</div></div>' +
+        '<div class="result-item"><div class="lbl">实际冷却</div><div class="val">' + actual.toFixed(2) + 's</div></div>' +
+        '<div class="result-item"><div class="lbl">缩短幅度</div><div class="val">' + reduced.toFixed(2) + 's</div></div>' +
+        '</div>';
+}
+
+// Valorant Penetration Damage
+var weaponData = {
+    phantom:   { hp45: 140, hp39: 120, hp30: 105 },
+    vandal:    { hp45: 150, hp39: 140, hp30: 80 },
+    shorty:    { hp45: 36,  hp39: 18,  hp30: 12 },
+    sova:      { hp45: 150, hp39: 125, hp30: 85 }
+};
+var wallPenalty = [1, 0.8, 0.6, 0.4, 0.2];
+var distMap = { close: 'hp45', mid: 'hp39', far: 'hp30' };
+
+function calcPen() {
+    var w = document.getElementById('weaponSelect').value;
+    var walls = parseInt(document.getElementById('wallsCrossed').value);
+    var dist = document.getElementById('distSelect').value;
+    var wd = weaponData[w];
+    var rawHP = wd[distMap[dist]];
+    var finalHP = Math.ceil(rawHP * wallPenalty[walls]);
+    var status, statusColor;
+    if (finalHP >= 50) { status = '一击必杀'; statusColor = '#2ea043'; }
+    else if (finalHP >= 20) { status = '两枪或三枪能杀'; statusColor = '#d29922'; }
+    else { status = '至少需要三枪以上'; statusColor = '#f85149'; }
+    document.getElementById('penResult').innerHTML =
+        '<div class="result-grid">' +
+        '<div class="result-item"><div class="lbl">原始伤害(' + dist + ')</div><div class="val">' + rawHP + '</div></div>' +
+        '<div class="result-item"><div class="lbl">穿透衰减</div><div class="val">×</div></div>' +
+        '<div class="result-item"><div class="lbl">最终伤害</div><div class="val" style="color:' + statusColor + '">' + finalHP + '</div></div>' +
+        '</div>' +
+        '<p style="color:#8b949e;margin-top:8px;font-size:.8rem">' + status + '</p>';
+}
+
+// Economy Calculator
+function calcEco() {
+    var curr = parseInt(document.getElementById('currMoney').value) || 800;
+    var result = document.getElementById('roundResult').value;
+    var survived = document.getElementById('survived').value;
+    var gain;
+    switch (result) {
+        case 'win':
+            gain = survived === 'yes' ? 2200 : 1400;
+            break;
+        case 'lose':
+            gain = 1400 + (curr < 1900 ? 3250 : 0);
+            break;
+        case 'loss_bonus':
+            gain = 1400 + 3250;
+            break;
+    }
+    var next = Math.min(curr + gain, 10000);
+    document.getElementById('ecoResult').innerHTML =
+        '<div class="result-grid">' +
+        '<div class="result-item"><div class="lbl">当前资金</div><div class="val">$' + curr.toLocaleString() + '</div></div>' +
+        '<div class="result-item"><div class="lbl">预计收入</div><div class="val">+$' + gain.toLocaleString() + '</div></div>' +
+        '<div class="result-item"><div class="lbl">下回合预计</div><div class="val">$' + next.toLocaleString() + '</div></div>' +
+        '</div>';
+}
+
+// Crosshair Generator
+function generateCSS() {
+    var color = document.getElementById('crossColor').value;
+    var gap = parseInt(document.getElementById('gapSize').value) || 8;
+    var lw = parseInt(document.getElementById('lineWidth').value) || 2;
+    var len = parseInt(document.getElementById('crossLength').value) || 20;
+    var dot = document.getElementById('showDot').checked;
+    var outline = document.getElementById('showOutlines').checked;
+    
+    var size = len * 2 + gap + lw;
+    var cx = len + gap + lw / 2;
+    var cy = len + gap + lw / 2;
+    var endPt = len - gap - lw;
+    
+    var svg = '<svg width="' + size + '" height="' + size + '" xmlns="http://www.w3.org/2000/svg">\n';
+    svg += '  <g stroke="' + color + '" stroke-width="' + lw + '" fill="none">\n';
+    // Top
+    svg += '    <line x1="' + cx + '" y1="' + (cy - gap) + '" x2="' + cx + '" y2="' + (cy - gap - endPt) + '"/>\n';
+    // Bottom
+    svg += '    <line x1="' + cx + '" y1="' + (cy + gap) + '" x2="' + cx + '" y2="' + (cy + gap + endPt) + '"/>\n';
+    // Left
+    svg += '    <line x1="' + (cx - gap) + '" y1="' + cy + '" x2="' + (cx - gap - endPt) + '" y2="' + cy + '"/>\n';
+    // Right
+    svg += '    <line x1="' + (cx + gap) + '" y1="' + cy + '" x2="' + (cx + gap + endPt) + '" y2="' + cy + '"/>\n';
+    if (dot) {
+        svg += '    <rect x="' + (cx - lw/2) + '" y="' + (cy - lw/2) + '" width="' + lw + '" height="' + lw + '" fill="' + color + '"/>\n';
+    }
+    svg += '  </g>\n';
+    if (outline) {
+        svg += '  <g stroke="' + color + '" stroke-width="1" fill="none" opacity=".5">\n';
+        svg += '    <line x1="' + (cx - gap) + '" y1="' + cy + '" x2="' + (cx + gap) + '" y2="' + cy + '"/>\n';
+        svg += '    <line x1="' + cx + '" y1="' + (cy - gap) + '" x2="' + cx + '" y2="' + (cy + gap) + '"/>\n';
+        svg += '  </g>\n';
+    }
+    svg += '</svg>';
+    
+    document.getElementById('crossPreview').innerHTML = svg;
+    document.getElementById('cssOutput').innerHTML = 
+        '<pre style="background:#0d1117;padding:12px;border-radius:8px;font-size:.85rem;overflow-x:auto;color:#7ee787">' + escapeHtml(svg) + '</pre>';
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function copyCrosshair() {
+    var el = document.getElementById('cssOutput');
+    if (el && el.textContent) {
+        navigator.clipboard.writeText(el.textContent).then(function() {
+            var btns = document.querySelectorAll('#crossPreview + .btn-secondary, .card button');
+            btns.forEach(function(b) {
+                if (b.textContent === '复制') {
+                    b.textContent = '✓ 已复制';
+                    setTimeout(function() { b.textContent = '复制'; }, 2000);
+                }
+            });
+        });
+    }
+}
+
+// Tier List Editor
+var tierColors = {
+    T0: '#ff7b72', T1: '#ffa657', T2: '#d29922',
+    T3: '#e3b341', T4: '#7eb062', T5: '#6e7681'
+};
+
+function autoBuildTierList() {
+    var tiers = ['T0', 'T1', 'T2', 'T3', 'T4', 'T5'];
+    var h = '<table><thead><tr><th>T级</th><th>数量</th><th>角色列表</th></tr></thead><tbody>';
+    tiers.forEach(function(t) {
+        var textarea = document.querySelector('.tier-input[data-tier="' + t + '"]');
+        var names = [];
+        if (textarea && textarea.value) {
+            names = textarea.value.split('\n').map(function(n){return n.trim();}).filter(function(n){return n.length > 0;});
+        }
+        h += '<tr>';
+        h += '<td><span style="display:inline-block;padding:2px 10px;border-radius:4px;color:#fff;background:' + tierColors[t] + '">' + t + '</span></td>';
+        h += '<td>' + names.length + '</td>';
+        h += '<td>' + (names.length > 0 
+            ? names.map(function(n){return '<span style="margin:2px;display:inline-block;background:#21262d;padding:2px 8px;border-radius:4px">' + n + '</span>';}).join(' ')
+            : '<span style="color:#484f58">未填写</span>') + '</td>';
+        h += '</tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('tierPreview').innerHTML = h;
+}
+
+function exportTierList() {
+    var tiers = ['T0', 'T1', 'T2', 'T3', 'T4', 'T5'];
+    var text = '# 角色排行榜\n\n';
+    tiers.forEach(function(t) {
+        var textarea = document.querySelector('.tier-input[data-tier="' + t + '"]');
+        var names = [];
+        if (textarea && textarea.value) {
+            names = textarea.value.split('\n').map(function(n){return n.trim();}).filter(function(n){return n.length > 0;});
+        }
+        text += '## ' + t + '\n';
+        if (names.length > 0) {
+            names.forEach(function(n, i) {
+                text += (i + 1) + '. ' + n + '\n';
+            });
+        } else {
+            text += '(空)\n';
+        }
+        text += '\n';
+    });
+    alert(text);
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).catch(function(){});
+    }
+}
+
+// Initialize
+generateCSS();
+autoBuildTierList();
+calcExp();
+</script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕐 时间戳转换器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .now-box {
+            text-align: center; padding: 20px;
+            background: #0d1117; border-radius: 10px;
+        }
+        .now-ts { font-size: 2.5rem; font-weight: bold; color: #58a6ff; font-family: monospace; }
+        .now-date { font-size: 1rem; color: #8b949e; margin-top: 8px; }
+
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-label { font-size: 0.85rem; color: #8b949e; }
+        input[type="text"], input[type="number"], select {
+            width: 100%; padding: 12px 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 1rem; font-family: monospace;
+        }
+        input:focus, select:focus { outline: none; border-color: #58a6ff; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn {
+            padding: 10px 20px; border-radius: 6px; cursor: pointer;
+            font-size: 0.9rem; border: 1px solid #30363d; transition: all 0.2s;
+        }
+        .btn-primary { background: #1f6feb; color: white; border-color: #1f6feb; }
+        .btn-primary:hover { background: #3a7bd5; }
+        .btn-secondary { background: #21262d; color: #e6edf3; }
+        .btn-secondary:hover { background: #30363d; }
+
+        .result-grid { display: grid; gap: 10px; margin-top: 16px; }
+        .result-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 16px; background: #0d1117; border-radius: 8px;
+        }
+        .result-label { color: #8b949e; font-size: 0.85rem; }
+        .result-value { color: #e6edf3; font-family: monospace; font-size: 0.9rem; }
+        .copy-btn {
+            padding: 4px 10px; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; border-radius: 4px; cursor: pointer; font-size: 0.75rem;
+            margin-left: 8px;
+        }
+        .copy-btn:hover { background: #30363d; color: #e6edf3; }
+        .copy-btn.copied { background: #238636; color: white; border-color: #238636; }
+
+        .status-ok { color: #2ea043; font-size: 0.85rem; margin-top: 8px; }
+        .status-error { color: #da3633; font-size: 0.85rem; margin-top: 8px; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            .input-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🕐 时间戳转换器</h1>
+        <p class="subtitle">Unix 时间戳与人类可读时间互转</p>
+
+        <!-- Current Time -->
+        <div class="card">
+            <div class="card-title">⏰ 当前时间</div>
+            <div class="now-box">
+                <div class="now-ts" id="nowTs">—</div>
+                <div class="now-date" id="nowDate">—</div>
+            </div>
+            <div class="btn-row" style="justify-content:center;margin-top:16px;">
+                <button class="btn btn-secondary" onclick="copyNow(this)">复制当前时间戳</button>
+                <button class="btn btn-secondary" onclick="useNow()">使用当前时间 ↓</button>
+            </div>
+        </div>
+
+        <!-- Timestamp to Date -->
+        <div class="card">
+            <div class="card-title">🔢 时间戳 → 日期时间</div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label class="input-label">输入时间戳</label>
+                    <input type="text" id="tsInput" placeholder="1700000000" oninput="tsToDate()">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">单位</label>
+                    <select id="tsUnit" onchange="tsToDate()">
+                        <option value="s">秒 (s)</option>
+                        <option value="ms">毫秒 (ms)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="tsResult" class="result-grid"></div>
+        </div>
+
+        <!-- Date to Timestamp -->
+        <div class="card">
+            <div class="card-title">📅 日期时间 → 时间戳</div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label class="input-label">日期时间字符串</label>
+                    <input type="text" id="dateInput" placeholder="2024-01-15 12:30:00" oninput="dateToTs()">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">或选择日期</label>
+                    <input type="text" id="datePicker" placeholder="点击输入日期" style="cursor:pointer" onclick="showDatePicker()">
+                </div>
+            </div>
+            <div id="dateResult" class="result-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        // Live clock
+        function updateClock() {
+            const now = new Date();
+            const ts = Math.floor(now.getTime() / 1000);
+            document.getElementById('nowTs').textContent = ts;
+            document.getElementById('nowDate').textContent = now.toLocaleString('zh-CN', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            });
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        function copyNow(btn) {
+            const ts = document.getElementById('nowTs').textContent;
+            navigator.clipboard.writeText(ts).then(() => {
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '复制当前时间戳'; btn.classList.remove('copied'); }, 1500);
+            });
+        }
+
+        function useNow() {
+            const ts = Math.floor(Date.now() / 1000);
+            document.getElementById('tsInput').value = ts;
+            tsToDate();
+        }
+
+        function tsToDate() {
+            const val = document.getElementById('tsInput').value.trim();
+            const unit = document.getElementById('tsUnit').value;
+            const container = document.getElementById('tsResult');
+
+            if (!val) { container.innerHTML = ''; return; }
+
+            const num = parseFloat(val);
+            if (isNaN(num)) {
+                container.innerHTML = '<div class="status-error">❌ 请输入有效数字</div>';
+                return;
+            }
+
+            const ms = unit === 's' ? num * 1000 : num;
+            const date = new Date(ms);
+
+            if (isNaN(date.getTime())) {
+                container.innerHTML = '<div class="status-error">❌ 无效的时间戳</div>';
+                return;
+            }
+
+            const formats = [
+                { label: '本地时间', value: date.toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }) },
+                { label: 'UTC 时间', value: date.toUTCString() },
+                { label: 'ISO 8601', value: date.toISOString() },
+                { label: '秒级时间戳', value: Math.floor(ms / 1000).toString() },
+                { label: '毫秒级时间戳', value: ms.toString() },
+                { label: '相对时间', value: relativeTime(ms) },
+            ];
+
+            container.innerHTML = formats.map(f => `
+                <div class="result-row">
+                    <span class="result-label">${f.label}</span>
+                    <span>
+                        <span class="result-value">${f.value}</span>
+                        <button class="copy-btn" onclick="copyVal('${f.value}', this)">复制</button>
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function dateToTs() {
+            const val = document.getElementById('dateInput').value.trim();
+            const container = document.getElementById('dateResult');
+
+            if (!val) { container.innerHTML = ''; return; }
+
+            // Try various formats
+            let date;
+            // Replace common Chinese date formats
+            const normalized = val.replace(/年/g, '-').replace(/月/g, '-').replace(/日/g, '').replace(/时/g, ':').replace(/分/g, ':').replace(/秒/g, '');
+            date = new Date(normalized);
+
+            if (isNaN(date.getTime())) {
+                container.innerHTML = '<div class="status-error">❌ 无法解析日期格式。支持: 2024-01-15 12:30:00, 2024/01/15, Jan 15 2024 等</div>';
+                return;
+            }
+
+            const ts = Math.floor(date.getTime() / 1000);
+            const formats = [
+                { label: '秒级时间戳', value: ts.toString() },
+                { label: '毫秒级时间戳', value: date.getTime().toString() },
+                { label: 'ISO 8601', value: date.toISOString() },
+                { label: '本地时间', value: date.toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }) },
+            ];
+
+            container.innerHTML = formats.map(f => `
+                <div class="result-row">
+                    <span class="result-label">${f.label}</span>
+                    <span>
+                        <span class="result-value">${f.value}</span>
+                        <button class="copy-btn" onclick="copyVal('${f.value}', this)">复制</button>
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function showDatePicker() {
+            const input = document.createElement('input');
+            input.type = 'datetime-local';
+            input.style.position = 'fixed';
+            input.style.opacity = '0';
+            document.body.appendChild(input);
+            input.addEventListener('change', () => {
+                document.getElementById('dateInput').value = input.value.replace('T', ' ');
+                dateToTs();
+                document.body.removeChild(input);
+            });
+            input.showPicker ? input.showPicker() : input.click();
+        }
+
+        function relativeTime(ms) {
+            const diff = Date.now() - ms;
+            const abs = Math.abs(diff);
+            const isFuture = diff < 0;
+            const prefix = isFuture ? '未来 ' : '';
+            const suffix = isFuture ? '' : '前';
+
+            if (abs < 60000) return Math.floor(abs / 1000) + ' 秒' + suffix;
+            if (abs < 3600000) return Math.floor(abs / 60000) + ' 分钟' + suffix;
+            if (abs < 86400000) return Math.floor(abs / 3600000) + ' 小时' + suffix;
+            if (abs < 2592000000) return Math.floor(abs / 86400000) + ' 天' + suffix;
+            if (abs < 31536000000) return Math.floor(abs / 2592000000) + ' 个月' + suffix;
+            return (abs / 31536000000).toFixed(1) + ' 年' + suffix;
+        }
+
+        function copyVal(val, btn) {
+            navigator.clipboard.writeText(val).then(() => {
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>↔️ 互补色生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 750px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        /* Base color input */
+        .base-input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        input[type="text"] {
+            flex: 1; padding: 12px 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 1rem; font-family: monospace;
+        }
+        input[type="text"]:focus { outline: none; border-color: #58a6ff; }
+        input[type="color"] {
+            width: 48px; height: 44px; border: 1px solid #30363d;
+            border-radius: 8px; background: #0d1117; cursor: pointer; padding: 4px;
+        }
+        .base-swatch {
+            width: 60px; height: 60px; border-radius: 10px;
+            border: 2px solid #30363d; flex-shrink: 0;
+        }
+
+        /* Scheme sections */
+        .scheme-section { margin-bottom: 20px; }
+        .scheme-title {
+            font-size: 0.95rem; color: #8b949e; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .scheme-desc { font-size: 0.8rem; color: #484f58; margin-bottom: 10px; }
+
+        .scheme-colors {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .scheme-color {
+            flex: 1;
+            min-width: 80px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .scheme-color:hover { transform: scale(1.05); }
+        .scheme-swatch {
+            width: 100%;
+            height: 60px;
+            border-radius: 8px;
+            border: 2px solid #30363d;
+            margin-bottom: 6px;
+        }
+        .scheme-label { font-family: monospace; font-size: 0.8rem; color: #e6edf3; }
+        .scheme-name { font-size: 0.7rem; color: #8b949e; margin-top: 2px; }
+
+        /* Mini wheel visualization */
+        .wheel-mini {
+            width: 200px; height: 200px; margin: 0 auto 20px;
+            position: relative;
+        }
+        .wheel-mini canvas { width: 200px; height: 200px; border-radius: 50%; border: 2px solid #30363d; }
+        .wheel-dot {
+            position: absolute; width: 12px; height: 12px;
+            border-radius: 50%; border: 2px solid white;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+        }
+
+        .copy-toast {
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            padding: 10px 20px; background: #238636; color: white;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        .copy-toast.show { opacity: 1; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            .scheme-colors { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>↔️ 互补色生成器</h1>
+        <p class="subtitle">基于色轮原理，快速生成各种配色方案</p>
+
+        <!-- Base Color -->
+        <div class="card">
+            <div class="card-title">🎯 基准颜色</div>
+            <div class="base-input-row">
+                <div class="base-swatch" id="baseSwatch"></div>
+                <input type="text" id="baseInput" value="#58a6ff" placeholder="#58a6ff">
+                <input type="color" id="basePicker" value="#58a6ff">
+            </div>
+        </div>
+
+        <!-- Wheel Mini -->
+        <div class="card">
+            <div class="card-title">🌈 色轮预览</div>
+            <div class="wheel-mini">
+                <canvas id="miniWheel" width="200" height="200"></canvas>
+                <div id="wheelDots"></div>
+            </div>
+        </div>
+
+        <!-- Color Schemes -->
+        <div id="schemesContainer"></div>
+    </div>
+
+    <div class="copy-toast" id="copyToast">已复制颜色值</div>
+
+    <script>
+        // === Color Utilities ===
+
+        function hexToRgb(hex) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            if (hex.length !== 6) return null;
+            const num = parseInt(hex, 16);
+            if (isNaN(num)) return null;
+            return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+        }
+
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(v => {
+                const h = Math.max(0, Math.min(255, Math.round(v))).toString(16);
+                return h.length === 1 ? '0' + h : h;
+            }).join('');
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) { h = s = 0; } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return { h: h * 360, s: s * 100, l: l * 100 };
+        }
+
+        function hslToRgb(h, s, l) {
+            h /= 360; s /= 100; l /= 100;
+            let r, g, b;
+            if (s === 0) { r = g = b = l; } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1; if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+        }
+
+        function rotateHue(h, degrees) {
+            return ((h + degrees) % 360 + 360) % 360;
+        }
+
+        // === Schemes ===
+
+        function generateSchemes(hex) {
+            const rgb = hexToRgb(hex);
+            if (!rgb) return [];
+            const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+            const h = hsl.h, s = hsl.s, l = hsl.l;
+
+            const makeColor = (hue, sat, lig) => {
+                const c = hslToRgb(hue, sat, lig);
+                return rgbToHex(c.r, c.g, c.b);
+            };
+
+            return [
+                {
+                    name: '互补色',
+                    icon: '↔️',
+                    desc: '色轮上 180° 对面的颜色，对比强烈',
+                    colors: [
+                        { hex: hex, label: '基准' },
+                        { hex: makeColor(rotateHue(h, 180), s, l), label: '互补' }
+                    ]
+                },
+                {
+                    name: '类似色',
+                    icon: '↗️',
+                    desc: '色轮上相邻 ±30° 的颜色，和谐自然',
+                    colors: [
+                        { hex: makeColor(rotateHue(h, -30), s, l), label: '-30°' },
+                        { hex: hex, label: '基准' },
+                        { hex: makeColor(rotateHue(h, 30), s, l), label: '+30°' }
+                    ]
+                },
+                {
+                    name: '三等分色',
+                    icon: '🔺',
+                    desc: '色轮上均分 120° 的三个颜色',
+                    colors: [
+                        { hex: hex, label: '基准' },
+                        { hex: makeColor(rotateHue(h, 120), s, l), label: '+120°' },
+                        { hex: makeColor(rotateHue(h, 240), s, l), label: '+240°' }
+                    ]
+                },
+                {
+                    name: '分裂互补色',
+                    icon: '🔀',
+                    desc: '基准色 + 互补色两侧的类似色',
+                    colors: [
+                        { hex: makeColor(rotateHue(h, 150), s, l), label: '+150°' },
+                        { hex: hex, label: '基准' },
+                        { hex: makeColor(rotateHue(h, 210), s, l), label: '+210°' }
+                    ]
+                },
+                {
+                    name: '四等分色（矩形）',
+                    icon: '⬛',
+                    desc: '色轮上均分 90° 的四个颜色',
+                    colors: [
+                        { hex: hex, label: '基准' },
+                        { hex: makeColor(rotateHue(h, 90), s, l), label: '+90°' },
+                        { hex: makeColor(rotateHue(h, 180), s, l), label: '+180°' },
+                        { hex: makeColor(rotateHue(h, 270), s, l), label: '+270°' }
+                    ]
+                },
+                {
+                    name: '明暗变化',
+                    icon: '🌓',
+                    desc: '同一色相不同明度的系列',
+                    colors: [
+                        { hex: makeColor(h, s, Math.max(l - 30, 10)), label: '深' },
+                        { hex: makeColor(h, s, Math.max(l - 15, 15)), label: '中深' },
+                        { hex: hex, label: '基准' },
+                        { hex: makeColor(h, s, Math.min(l + 15, 90)), label: '中浅' },
+                        { hex: makeColor(h, s, Math.min(l + 30, 95)), label: '浅' }
+                    ]
+                },
+                {
+                    name: '饱和度变化',
+                    icon: '🎨',
+                    desc: '同一色相不同饱和度的系列',
+                    colors: [
+                        { hex: makeColor(h, Math.max(s - 40, 5), l), label: '低饱和' },
+                        { hex: makeColor(h, Math.max(s - 20, 10), l), label: '中低' },
+                        { hex: hex, label: '基准' },
+                        { hex: makeColor(h, Math.min(s + 20, 100), l), label: '中高' },
+                        { hex: makeColor(h, Math.min(s + 40, 100), l), label: '高饱和' }
+                    ]
+                }
+            ];
+        }
+
+        // === Draw Mini Wheel ===
+
+        function drawMiniWheel(hex) {
+            const canvas = document.getElementById('miniWheel');
+            const ctx = canvas.getContext('2d');
+            const cx = 100, cy = 100, r = 95;
+
+            for (let angle = 0; angle < 360; angle += 1) {
+                const startAngle = (angle - 1) * Math.PI / 180;
+                const endAngle = (angle + 1) * Math.PI / 180;
+
+                const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                gradient.addColorStop(0, `hsl(${angle}, 0%, 70%)`);
+                gradient.addColorStop(1, `hsl(${angle}, 100%, 50%)`);
+
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+        }
+
+        function placeWheelDots(schemes, baseHsl) {
+            const dotsContainer = document.getElementById('wheelDots');
+            dotsContainer.innerHTML = '';
+
+            // Get all unique angles from the first few schemes
+            const relevantSchemes = schemes.slice(0, 4); // complementary, analogous, triadic, split
+            const allColors = new Set();
+
+            relevantSchemes.forEach(scheme => {
+                scheme.colors.forEach(c => {
+                    if (!allColors.has(c.hex)) {
+                        allColors.add(c.hex);
+                        const rgb = hexToRgb(c.hex);
+                        if (!rgb) return;
+                        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+                        const angle = hsl.h * Math.PI / 180;
+                        const dotRadius = 75; // place dots at ~75% radius
+                        const cx = 100, cy = 100;
+                        const x = cx + Math.cos(angle) * dotRadius;
+                        const y = cy + Math.sin(angle) * dotRadius;
+
+                        const dot = document.createElement('div');
+                        dot.className = 'wheel-dot';
+                        dot.style.left = x + 'px';
+                        dot.style.top = y + 'px';
+                        dot.style.backgroundColor = c.hex;
+                        dot.title = c.hex;
+                        dotsContainer.appendChild(dot);
+                    }
+                });
+            });
+        }
+
+        // === Render ===
+
+        function showToast(text) {
+            const toast = document.getElementById('copyToast');
+            toast.textContent = text;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1500);
+        }
+
+        function render(hex) {
+            const rgb = hexToRgb(hex);
+            if (!rgb) return;
+
+            const baseSwatch = document.getElementById('baseSwatch');
+            baseSwatch.style.backgroundColor = hex;
+
+            const picker = document.getElementById('basePicker');
+            picker.value = hex;
+
+            const schemes = generateSchemes(hex);
+            const container = document.getElementById('schemesContainer');
+            container.innerHTML = '';
+
+            schemes.forEach(scheme => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="scheme-title">${scheme.icon} ${scheme.name}</div>
+                    <div class="scheme-desc">${scheme.desc}</div>
+                    <div class="scheme-colors">
+                        ${scheme.colors.map(c => `
+                            <div class="scheme-color" onclick="copyColor('${c.hex}')">
+                                <div class="scheme-swatch" style="background:${c.hex}"></div>
+                                <div class="scheme-label">${c.hex}</div>
+                                <div class="scheme-name">${c.label}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Wheel
+            drawMiniWheel(hex);
+            const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+            placeWheelDots(schemes, hsl);
+        }
+
+        function copyColor(hex) {
+            navigator.clipboard.writeText(hex).then(() => showToast('已复制: ' + hex));
+        }
+
+        // Events
+        const baseInput = document.getElementById('baseInput');
+        const basePicker = document.getElementById('basePicker');
+
+        baseInput.addEventListener('input', () => {
+            let val = baseInput.value.trim();
+            if (!val.startsWith('#')) val = '#' + val;
+            if (hexToRgb(val)) render(val);
+        });
+        basePicker.addEventListener('input', () => {
+            baseInput.value = basePicker.value;
+            render(basePicker.value);
+        });
+
+        // Init
+        render('#58a6ff');
+    </script>
+</body>
+</html>

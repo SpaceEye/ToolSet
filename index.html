@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛠️ 工具集 - ToolsSet</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 1600px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2.5rem; color: #58a6ff; letter-spacing: -1px; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 24px; font-size: 0.95rem; }
+
+        /* 搜索框 */
+        .search-wrap { max-width: 560px; margin: 0 auto 32px; position: relative; }
+        .search-wrap .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #8b949e; font-size: 1rem; pointer-events: none; }
+        #search { width: 100%; padding: 12px 16px 12px 44px; background: #0d1117; border: 1px solid #30363d; border-radius: 10px; color: #e6edf3; font-size: 1rem; transition: all 0.2s; }
+        #search:focus { outline: none; border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88,166,255,0.15); }
+        #search::placeholder { color: #484f58; }
+        .search-hint { text-align: center; color: #484f58; font-size: 0.75rem; margin: -16px 0 32px; }
+        .search-hint kbd { background: #21262d; padding: 1px 6px; border-radius: 4px; font-size: 0.72rem; color: #79c0ff; font-family: inherit; }
+        .no-result { text-align: center; color: #8b949e; padding: 48px 0; font-size: 0.95rem; display: none; }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: #8b949e;
+            margin: 36px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title:first-of-type { margin-top: 0; }
+
+        /* 响应式网格：根据浏览器宽度自适应每行列数 */
+        .tool-grid { display: grid; gap: 20px; }
+        @media (min-width: 1401px) { .tool-grid { grid-template-columns: repeat(6, 1fr); } }
+        @media (min-width: 1100px) and (max-width: 1400px) { .tool-grid { grid-template-columns: repeat(5, 1fr); } }
+        @media (min-width: 800px) and (max-width: 1099px) { .tool-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (min-width: 600px) and (max-width: 799px) { .tool-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 480px) and (max-width: 599px) { .tool-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 479px) { .tool-grid { grid-template-columns: 1fr; } }
+
+        .tool-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: block;
+        }
+        .tool-card:hover {
+            border-color: #58a6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(88, 166, 255, 0.1);
+        }
+        .tool-card .icon { font-size: 2rem; margin-bottom: 12px; }
+        .tool-card h2 { font-size: 1.1rem; color: #e6edf3; margin-bottom: 8px; }
+        .tool-card p { color: #8b949e; font-size: 0.85rem; line-height: 1.4; }
+        .tool-card .tag {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 3px 8px;
+            background: #21262d;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #58a6ff;
+        }
+        .tool-card .tag-green { color: #2ea043; }
+        .tool-card .tag-purple { color: #a371f7; }
+        .tool-card .tag-orange { color: #d29922; }
+
+        /* 游戏工具箱 section title */
+        .game-section {
+            font-size: 1.2rem;
+            color: #8b949e;
+            margin: 36px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .footer { text-align: center; margin-top: 48px; color: #484f58; font-size: 0.8rem; }
+        .footer code { background: #21262d; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; color: #79c0ff; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ 工具集</h1>
+        <p class="subtitle">一组实用的在线工具 · 颜色设计 · 编程辅助 · 编码转换</p>
+
+        <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search" placeholder="搜索工具名称或关键词（如 JSON、颜色、编码）..." autocomplete="off">
+        </div>
+        <p class="search-hint">按 <kbd>/</kbd> 快速聚焦搜索框 · <kbd>Esc</kbd> 清空</p>
+        <p class="no-result" id="noResult">未找到匹配的工具</p>
+
+        <div class="section-title">🎨 颜色与设计工具</div>
+
+        <div class="tool-grid">
+            <a data-name="颜色转换器 在 HEX、RGB、RGBA、HSL、HSLA 格式之间快速互转，支持实时预览和一键复制。 颜色工具" href="color-converter.html" class="tool-card">
+                <div class="icon">🎨</div>
+                <h2>颜色转换器</h2>
+                <p>在 HEX、RGB、RGBA、HSL、HSLA 格式之间快速互转，支持实时预览和一键复制。</p>
+                <span class="tag tag-green">颜色工具</span>
+            </a>
+
+            <a data-name="色轮选择器 可视化色轮拖拽取色，实时预览颜色效果，支持多种颜色空间输出。 颜色工具" href="color-wheel.html" class="tool-card">
+                <div class="icon">🌈</div>
+                <h2>色轮选择器</h2>
+                <p>可视化色轮拖拽取色，实时预览颜色效果，支持多种颜色空间输出。</p>
+                <span class="tag tag-green">颜色工具</span>
+            </a>
+
+            <a data-name="对比度检查器 检查前景/背景色的 WCAG 2.0 对比度比，辅助无障碍设计，支持 AA/AAA 标准。 无障碍" href="contrast-checker.html" class="tool-card">
+                <div class="icon">📐</div>
+                <h2>对比度检查器</h2>
+                <p>检查前景/背景色的 WCAG 2.0 对比度比，辅助无障碍设计，支持 AA/AAA 标准。</p>
+                <span class="tag tag-green">无障碍</span>
+            </a>
+
+            <a data-name="渐变生成器 可视化编辑 CSS 渐变配色方案，支持线性、径向、圆锥渐变，一键复制代码。 CSS 工具" href="gradient-generator.html" class="tool-card">
+                <div class="icon">✨</div>
+                <h2>渐变生成器</h2>
+                <p>可视化编辑 CSS 渐变配色方案，支持线性、径向、圆锥渐变，一键复制代码。</p>
+                <span class="tag tag-green">CSS 工具</span>
+            </a>
+
+            <a data-name="互补色生成器 基于色轮原理快速生成互补色、类似色、三等分色等多种配色方案。 配色方案" href="complementary-colors.html" class="tool-card">
+                <div class="icon">↔️</div>
+                <h2>互补色生成器</h2>
+                <p>基于色轮原理快速生成互补色、类似色、三等分色等多种配色方案。</p>
+                <span class="tag tag-green">配色方案</span>
+            </a>
+
+            <a data-name="配色理论 探索色彩理论与设计原则：色轮基础、冷暖色调、色彩心理学、60-30-10 法则。 设计知识" href="color-theory.html" class="tool-card">
+                <div class="icon">🎭</div>
+                <h2>配色理论</h2>
+                <p>探索色彩理论与设计原则：色轮基础、冷暖色调、色彩心理学、60-30-10 法则。</p>
+                <span class="tag tag-green">设计知识</span>
+            </a>
+        </div>
+
+        <div class="section-title">💻 编程辅助工具</div>
+
+        <div class="tool-grid">
+            <a data-name="JSON 格式化器 格式化、压缩、校验 JSON 数据，支持语法高亮显示，实时输入校验。 数据处理" href="json-formatter.html" class="tool-card">
+                <div class="icon">{ }</div>
+                <h2>JSON 格式化器</h2>
+                <p>格式化、压缩、校验 JSON 数据，支持语法高亮显示，实时输入校验。</p>
+                <span class="tag tag-purple">数据处理</span>
+            </a>
+
+            <a data-name="Base64 编解码器 Base64 编码与解码转换，完整支持 UTF-8 中文字符处理。 编码转换" href="base64.html" class="tool-card">
+                <div class="icon">🔐</div>
+                <h2>Base64 编解码器</h2>
+                <p>Base64 编码与解码转换，完整支持 UTF-8 中文字符处理。</p>
+                <span class="tag tag-purple">编码转换</span>
+            </a>
+
+            <a data-name="URL 编解码器 URL encode/decode 转换，支持 URL 组成部分解析和查询参数提取。 编码转换" href="url-encoder.html" class="tool-card">
+                <div class="icon">🔗</div>
+                <h2>URL 编解码器</h2>
+                <p>URL encode/decode 转换，支持 URL 组成部分解析和查询参数提取。</p>
+                <span class="tag tag-purple">编码转换</span>
+            </a>
+
+            <a data-name="时间戳转换器 Unix 时间戳与人类可读时间互转，实时时钟显示，支持秒/毫秒切换。 时间工具" href="timestamp-converter.html" class="tool-card">
+                <div class="icon">🕐</div>
+                <h2>时间戳转换器</h2>
+                <p>Unix 时间戳与人类可读时间互转，实时时钟显示，支持秒/毫秒切换。</p>
+                <span class="tag tag-orange">时间工具</span>
+            </a>
+
+            <a data-name="正则表达式测试器 实时测试正则表达式，高亮匹配结果，内置 10+ 常用正则预设。 文本处理" href="regex-tester.html" class="tool-card">
+                <div class="icon">🔍</div>
+                <h2>正则表达式测试器</h2>
+                <p>实时测试正则表达式，高亮匹配结果，内置 10+ 常用正则预设。</p>
+                <span class="tag tag-purple">文本处理</span>
+            </a>
+
+            <a data-name="哈希生成器 计算文本或文件的 SHA-1/256/384/512 哈希值，支持文件拖拽上传。 安全工具" href="hash-generator.html" class="tool-card">
+                <div class="icon">#️⃣</div>
+                <h2>哈希生成器</h2>
+                <p>计算文本或文件的 SHA-1/256/384/512 哈希值，支持文件拖拽上传。</p>
+                <span class="tag tag-orange">安全工具</span>
+            </a>
+
+            <a data-name="UUID 生成器 批量生成 v4 UUID，支持大写/去连字符，基于 CSPRNG 加密随机源。 标识生成" href="uuid-generator.html" class="tool-card">
+                <div class="icon">🆔</div>
+                <h2>UUID 生成器</h2>
+                <p>批量生成 v4 UUID，支持大写/去连字符，基于 CSPRNG 加密随机源。</p>
+                <span class="tag tag-purple">标识生成</span>
+            </a>
+
+            <a data-name="字符串大小写转换 camelCase / PascalCase / snake_case / kebab-case 等 8 种命名风格实时互转。 文本处理" href="case-converter.html" class="tool-card">
+                <div class="icon">🔠</div>
+                <h2>字符串大小写转换</h2>
+                <p>camelCase / PascalCase / snake_case / kebab-case 等 8 种命名风格实时互转。</p>
+                <span class="tag tag-purple">文本处理</span>
+            </a>
+
+            <a data-name="进制转换器 二进制/八进制/十进制/十六进制实时互转，32 位补码与内存位图视图。 数值工具" href="radix-converter.html" class="tool-card">
+                <div class="icon">🔢</div>
+                <h2>进制转换器</h2>
+                <p>二进制/八进制/十进制/十六进制实时互转，32 位补码与内存位图视图。</p>
+                <span class="tag tag-purple">数值工具</span>
+            </a>
+
+            <a data-name="文本对比工具 基于 LCS 的逐行 Diff 对比，高亮新增与删除行，统计差异数量。 版本控制" href="diff-compare.html" class="tool-card">
+                <div class="icon">📄</div>
+                <h2>文本对比工具</h2>
+                <p>基于 LCS 的逐行 Diff 对比，高亮新增与删除行，统计差异数量。</p>
+                <span class="tag tag-purple">版本控制</span>
+            </a>
+
+            <a data-name="Markdown 预览器 轻量级 Markdown 实时渲染，支持标题、表格、代码块、引用，可导出 HTML。 文档工具" href="markdown-preview.html" class="tool-card">
+                <div class="icon">📝</div>
+                <h2>Markdown 预览器</h2>
+                <p>轻量级 Markdown 实时渲染，支持标题、表格、代码块、引用，可导出 HTML。</p>
+                <span class="tag tag-purple">文档工具</span>
+            </a>
+
+            <a data-name="JWT 解码器 解析 JWT 的 Header/Payload/Signature，语法高亮显示，检查 token 有效期。 认证调试" href="jwt-decoder.html" class="tool-card">
+                <div class="icon">🎫</div>
+                <h2>JWT 解码器</h2>
+                <p>解析 JWT 的 Header/Payload/Signature，语法高亮显示，检查 token 有效期。</p>
+                <span class="tag tag-orange">认证调试</span>
+            </a>
+
+            <a data-name="Cron 表达式解析器 解析 5/6 段 cron 表达式，逐字段中文说明，计算未来 5 次执行时间。 定时任务" href="cron-parser.html" class="tool-card">
+                <div class="icon">️</div>
+                <h2>Cron 表达式解析器</h2>
+                <p>解析 5/6 段 cron 表达式，逐字段中文说明，计算未来 5 次执行时间。</p>
+                <span class="tag tag-orange">定时任务</span>
+            </a>
+        </div>
+
+        <div class="section-title">🧰 网络与安全工具</div>
+
+        <div class="tool-grid">
+            <a data-name="HTML 实体编码/解码器 将特殊字符与 HTML 实体互相转换，方便前端开发与富文本处理。 编码转换" href="html-entities.html" class="tool-card">
+                <div class="icon">🔤</div>
+                <h2>HTML 实体编码/解码器</h2>
+                <p>将特殊字符与 HTML 实体互相转换，方便前端开发与富文本处理。</p>
+                <span class="tag tag-purple">编码转换</span>
+            </a>
+
+            <a data-name="IP 地址计算器 根据 IP 与 CIDR 前缀计算网络地址、广播地址和可用主机范围。 网络工具" href="ip-calculator.html" class="tool-card">
+                <div class="icon">🌐</div>
+                <h2>IP 地址计算器</h2>
+                <p>根据 IP 与 CIDR 前缀计算网络地址、广播地址和可用主机范围。</p>
+                <span class="tag tag-orange">网络工具</span>
+            </a>
+
+            <a data-name="密码生成器 生成安全随机密码，支持自定义长度、字符集和强度评估。 安全工具" href="password-generator.html" class="tool-card">
+                <div class="icon">🔑</div>
+                <h2>密码生成器</h2>
+                <p>生成安全随机密码，支持自定义长度、字符集和强度评估。</p>
+                <span class="tag tag-orange">安全工具</span>
+            </a>
+        </div>
+
+        <div class="section-title">🛠️ 开发者与设计工具</div>
+
+        <div class="tool-grid">
+            <a data-name="CSS 单位转换器 在 px / rem / em / % / vw / vh 等常见 CSS 单位之间快速换算。 CSS 工具" href="css-units.html" class="tool-card">
+                <div class="icon">📏</div>
+                <h2>CSS 单位转换器</h2>
+                <p>在 px / rem / em / % / vw / vh 等常见 CSS 单位之间快速换算。</p>
+                <span class="tag tag-green">CSS 工具</span>
+            </a>
+
+            <a data-name="QR 二维码生成器 将文本或 URL 生成为二维码图片，支持下载 PNG。 生成工具" href="qrcode-generator.html" class="tool-card">
+                <div class="icon">📱</div>
+                <h2>QR 二维码生成器</h2>
+                <p>将文本或 URL 生成为二维码图片，支持下载 PNG。</p>
+                <span class="tag tag-green">生成工具</span>
+            </a>
+
+            <a data-name="占位图片生成器 快速生成带尺寸标注的占位图片，用于 UI 原型和演示。 设计工具" href="placeholder-image.html" class="tool-card">
+                <div class="icon">🖼️</div>
+                <h2>占位图片生成器</h2>
+                <p>快速生成带尺寸标注的占位图片，用于 UI 原型和演示。</p>
+                <span class="tag tag-green">设计工具</span>
+            </a>
+
+            <a data-name="代码片段格式化 简单美化代码缩进，支持空格/Tab 切换、统一换行、去除多余空行。 代码工具" href="code-formatter.html" class="tool-card">
+                <div class="icon">💻</div>
+                <h2>代码片段格式化</h2>
+                <p>简单美化代码缩进，支持空格/Tab 切换、统一换行、去除多余空行。</p>
+                <span class="tag tag-purple">代码工具</span>
+            </a>
+
+            <a data-name="CSV/表格转换器 CSV 与 Markdown 表格、JSON 数组之间互相转换，并实时预览。 数据处理" href="csv-converter.html" class="tool-card">
+                <div class="icon">📊</div>
+                <h2>CSV/表格转换器</h2>
+                <p>CSV 与 Markdown 表格、JSON 数组之间互相转换，并实时预览。</p>
+                <span class="tag tag-purple">数据处理</span>
+            </a>
+
+            <a data-name="单位换算器 长度、重量、面积、体积、温度、数据存储等多种单位快速换算。 实用工具" href="unit-converter.html" class="tool-card">
+                <div class="icon">⚖️</div>
+                <h2>单位换算器</h2>
+                <p>长度、重量、面积、体积、温度、数据存储等多种单位快速换算。</p>
+                <span class="tag tag-orange">实用工具</span>
+            </a>
+        </div>
+
+        <div class="game-section">🎮 游戏工具箱</div>
+
+        <div class="tool-grid">
+            <a data-name="游戏工具箱 Minecraft LOL Valorant FPS 经验值 KDA 准星 T0-T5 经济计算器 附魔计算 红石时钟" href="gaming-tools.html" class="tool-card">
+                <div class="icon">🎮</div>
+                <h2>游戏工具箱</h2>
+                <p>Minecraft 经验/附魔/红石、LOL KDA/CDR 计算、无畏契约跨射伤量/经济预测、FPS 准星生成器、T 级排行榜编辑器。</p>
+                <span class="tag tag-orange">游戏玩家</span>
+            </a>
+        </div>
+
+    </div>
+
+    <script>
+        (function() {
+            const input = document.getElementById('search');
+            const noResult = document.getElementById('noResult');
+            const sections = document.querySelectorAll('.section-title, .tool-grid');
+            const sectionTitles = document.querySelectorAll('.section-title');
+
+            function filter() {
+                const q = input.value.trim().toLowerCase();
+                let totalVisible = 0;
+
+                // 逐个分类区域处理
+                sectionTitles.forEach(function(title) {
+                    // 找到紧随其后的 .tool-grid
+                    let grid = title.nextElementSibling;
+                    while (grid && !grid.classList.contains('tool-grid')) grid = grid.nextElementSibling;
+                    if (!grid) return;
+
+                    const cards = grid.querySelectorAll('.tool-card');
+                    let visible = 0;
+                    cards.forEach(function(card) {
+                        if (!q) {
+                            card.style.display = '';
+                            visible++;
+                        } else {
+                            const text = (card.dataset.name || card.textContent || '').toLowerCase();
+                            const match = text.includes(q);
+                            card.style.display = match ? '' : 'none';
+                            if (match) visible++;
+                        }
+                    });
+
+                    // 该分类下无匹配项时，隐藏标题 + 网格
+                    if (q) {
+                        title.style.display = visible ? '' : 'none';
+                        grid.style.display = visible ? '' : 'none';
+                    } else {
+                        title.style.display = '';
+                        grid.style.display = '';
+                    }
+                    totalVisible += visible;
+                });
+
+                // 显示"未找到"提示
+                noResult.style.display = (q && totalVisible === 0) ? 'block' : 'none';
+            }
+
+            input.addEventListener('input', filter);
+
+            // 键盘快捷键：/ 聚焦，Esc 清空
+            document.addEventListener('keydown', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                    if (e.key === 'Escape') { input.value = ''; filter(); input.blur(); }
+                    return;
+                }
+                if (e.key === '/') { e.preventDefault(); input.focus(); }
+            });
+        })();
+    </script>
+</body>
+</html>

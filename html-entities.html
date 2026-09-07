@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔤 HTML 实体编码/解码器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        textarea { width: 100%; height: 180px; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; color: #e6edf3; font-family: 'Consolas', monospace; font-size: 0.95rem; resize: vertical; }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn { padding: 10px 18px; background: #238636; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+        .btn:hover { background: #2ea043; }
+        .btn-secondary { background: #21262d; color: #79c0ff; border: 1px solid #30363d; }
+        .btn-secondary:hover { background: #30363d; }
+        .status { margin-top: 12px; font-size: 0.85rem; min-height: 20px; }
+        .status-error { color: #da3633; }
+        .status-ok { color: #2ea043; }
+        .examples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+        .chip { padding: 4px 10px; background: #0d1117; border: 1px solid #30363d; border-radius: 4px; color: #8b949e; font-size: 0.8rem; cursor: pointer; }
+        .chip:hover { border-color: #58a6ff; color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🔤 HTML 实体编码/解码器</h1>
+        <p class="subtitle">将特殊字符转换为 HTML 实体，或从 HTML 实体还原原始字符</p>
+
+        <div class="card">
+            <div class="card-title"> 输入</div>
+            <textarea id="input" placeholder="在此输入文本或 HTML 实体..."></textarea>
+            <div class="examples">
+                <span class="chip" onclick="loadExample('encode')">示例：特殊字符</span>
+                <span class="chip" onclick="loadExample('decode')">示例：HTML 实体</span>
+            </div>
+            <div class="btn-row">
+                <button class="btn" onclick="encode()">编码 → 实体</button>
+                <button class="btn" onclick="decode()">解码 → 原文</button>
+                <button class="btn btn-secondary" onclick="copyResult()">复制结果</button>
+                <button class="btn btn-secondary" onclick="clearAll()">清空</button>
+            </div>
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"> 输出</div>
+            <textarea id="output" placeholder="结果将显示在这里..." readonly></textarea>
+        </div>
+
+        <div class="card">
+            <div class="card-title">ℹ️ 说明</div>
+            <p style="font-size: 0.85rem; color: #8b949e; line-height: 1.6;">
+                编码会将 <code>&amp;</code>、<code>&lt;</code>、<code>&gt;</code>、<code>"</code>、<code>'</code> 等字符转换为对应的 HTML 实体（如 <code>&amp;amp;</code>），<br>
+                解码则逆向还原。常用实体：<code>&amp;lt;</code> <code>&amp;gt;</code> <code>&amp;amp;</code> <code>&amp;quot;</code> <code>&amp;apos;</code>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function encode() {
+            const input = document.getElementById('input').value;
+            const output = document.getElementById('output');
+            const status = document.getElementById('status');
+            try {
+                output.value = input.replace(/[&<>"']/g, function(c) {
+                    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c];
+                });
+                status.textContent = '编码成功';
+                status.className = 'status status-ok';
+            } catch (e) {
+                status.textContent = '编码失败：' + e.message;
+                status.className = 'status status-error';
+            }
+        }
+
+        function decode() {
+            const input = document.getElementById('input').value;
+            const output = document.getElementById('output');
+            const status = document.getElementById('status');
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = input;
+            try {
+                // 先处理常见的 &amp; 到 & 的循环依赖问题
+                let decoded = textarea.value;
+                decoded = decoded.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+                                 .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+                                 .replace(/&amp;/g, '&');
+                output.value = decoded;
+                status.textContent = '解码成功';
+                status.className = 'status status-ok';
+            } catch (e) {
+                status.textContent = '解码失败：' + e.message;
+                status.className = 'status status-error';
+            }
+        }
+
+        function copyResult() {
+            const output = document.getElementById('output');
+            output.select();
+            document.execCommand('copy');
+            const status = document.getElementById('status');
+            status.textContent = '结果已复制到剪贴板';
+            status.className = 'status status-ok';
+        }
+
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('output').value = '';
+            const status = document.getElementById('status');
+            status.textContent = '';
+        }
+
+        function loadExample(type) {
+            const examples = {
+                encode: '<div class="box">Hello 世界 & "测试"</div>',
+                decode: '&lt;div class=&quot;box&quot;&gt;Hello &amp; 世界&lt;/div&gt;'
+            };
+            document.getElementById('input').value = examples[type] || '';
+            document.getElementById('output').value = '';
+            document.getElementById('status').textContent = '';
+        }
+    </script>
+</body>
+</html>

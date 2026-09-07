@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Base64 编解码器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        textarea {
+            width: 100%; min-height: 180px;
+            padding: 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 0.9rem; font-family: monospace;
+            resize: vertical; line-height: 1.6;
+        }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; justify-content: center; }
+        .btn {
+            padding: 10px 24px; border-radius: 6px; cursor: pointer;
+            font-size: 0.9rem; border: 1px solid #30363d; transition: all 0.2s;
+        }
+        .btn-encode { background: #1f6feb; color: white; border-color: #1f6feb; }
+        .btn-encode:hover { background: #3a7bd5; }
+        .btn-decode { background: #238636; color: white; border-color: #238636; }
+        .btn-decode:hover { background: #2ea043; }
+        .btn-swap { background: #21262d; color: #e6edf3; }
+        .btn-swap:hover { background: #30363d; }
+        .btn-danger { background: #da3633; color: white; border-color: #da3633; }
+        .btn-danger:hover { background: #f85149; }
+
+        .status-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px; background: #0d1117; border-radius: 8px;
+            margin-top: 12px; font-size: 0.85rem;
+        }
+        .status-ok { color: #2ea043; }
+        .status-error { color: #da3633; }
+        .status-info { color: #8b949e; }
+
+        .copy-btn {
+            padding: 6px 14px; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+        }
+        .copy-btn:hover { background: #30363d; color: #e6edf3; }
+        .copy-btn.copied { background: #238636; color: white; border-color: #238636; }
+
+        .info-box {
+            padding: 16px; background: #0d1117; border-radius: 8px;
+            font-size: 0.85rem; color: #8b949e; line-height: 1.6;
+        }
+        .info-box strong { color: #e6edf3; }
+
+        .arrow { font-size: 1.5rem; color: #58a6ff; text-align: center; margin: 8px 0; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🔐 Base64 编解码器</h1>
+        <p class="subtitle">Base64 编码与解码，支持 UTF-8 中文</p>
+
+        <div class="card">
+            <div class="card-title">📝 原始文本</div>
+            <textarea id="textInput" placeholder="输入要编码的文本...">Hello, 世界！</textarea>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn btn-encode" onclick="encode()">⬇️ 编码 →</button>
+            <button class="btn btn-swap" onclick="swap()">⇄ 交换</button>
+            <button class="btn btn-decode" onclick="decode()">⬆️ ← 解码</button>
+            <button class="btn btn-danger" onclick="clearAll()">✕ 清空</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔒 Base64 编码</div>
+            <textarea id="base64Input" placeholder="SGVsbG8sIOS4lueVjO+8gQ=="></textarea>
+            <div class="status-bar">
+                <span id="status" class="status-info">—</span>
+                <div>
+                    <button class="copy-btn" onclick="copyText('textInput', this)">复制原文</button>
+                    <button class="copy-btn" onclick="copyText('base64Input', this)" style="margin-left:4px">复制编码</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">ℹ️ 说明</div>
+            <div class="info-box">
+                <p><strong>Base64</strong> 是一种将二进制数据编码为 ASCII 字符的方案，常用于在 URL、邮件或 JSON 中传输二进制数据。</p>
+                <br>
+                <p>• 编码后长度约为原文的 <strong>4/3</strong> 倍</p>
+                <p>• 使用 A-Z、a-z、0-9、+、/ 共 64 个字符</p>
+                <p>• 末尾 = 为填充字符</p>
+                <p>• <strong>注意</strong>：Base64 是编码而非加密，不提供安全性</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('textInput');
+        const base64Input = document.getElementById('base64Input');
+        const statusEl = document.getElementById('status');
+
+        function encode() {
+            try {
+                const text = textInput.value;
+                // Support UTF-8
+                const encoded = btoa(unescape(encodeURIComponent(text)));
+                base64Input.value = encoded;
+                statusEl.textContent = '✓ 编码成功 · ' + text.length + ' → ' + encoded.length + ' 字符';
+                statusEl.className = 'status-ok';
+            } catch (e) {
+                statusEl.textContent = '❌ 编码失败: ' + e.message;
+                statusEl.className = 'status-error';
+            }
+        }
+
+        function decode() {
+            try {
+                const b64 = base64Input.value.trim();
+                const decoded = decodeURIComponent(escape(atob(b64)));
+                textInput.value = decoded;
+                statusEl.textContent = '✓ 解码成功 · ' + b64.length + ' → ' + decoded.length + ' 字符';
+                statusEl.className = 'status-ok';
+            } catch (e) {
+                statusEl.textContent = '❌ 解码失败: 无效的 Base64 字符串';
+                statusEl.className = 'status-error';
+            }
+        }
+
+        function swap() {
+            const tmp = textInput.value;
+            textInput.value = base64Input.value;
+            base64Input.value = tmp;
+        }
+
+        function clearAll() {
+            textInput.value = '';
+            base64Input.value = '';
+            statusEl.textContent = '—';
+            statusEl.className = 'status-info';
+        }
+
+        function copyText(id, btn) {
+            const text = document.getElementById(id).value;
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = id === 'textInput' ? '复制原文' : '复制编码'; btn.classList.remove('copied'); }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>

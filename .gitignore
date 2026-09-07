@@ -1,0 +1,20 @@
+# 环境与编辑器残留（项目移动到工作区时误带入）
+.bash_history
+.bash_logout
+.bashrc
+.profile
+.sudo_as_admin_successful
+.vim/
+.viminfo
+
+# Hermes / 工具运行时数据（不属于项目）
+.hermes/
+.cache/
+.config/
+.cua-driver/
+.local/
+.npm/
+
+# 常规
+*.log
+.DS_Store

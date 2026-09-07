@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 正则表达式测试器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .regex-input-row { display: flex; gap: 8px; align-items: center; }
+        .regex-slash { color: #58a6ff; font-size: 1.5rem; font-weight: bold; }
+        input[type="text"] {
+            flex: 1; padding: 12px 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 1rem; font-family: monospace;
+        }
+        input[type="text"]:focus { outline: none; border-color: #58a6ff; }
+        .flags-input {
+            width: 80px !important; text-align: center;
+        }
+
+        .flags-row {
+            display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;
+        }
+        .flag-checkbox {
+            display: flex; align-items: center; gap: 4px;
+            cursor: pointer; font-size: 0.85rem; color: #8b949e;
+        }
+        .flag-checkbox input { cursor: pointer; }
+        .flag-checkbox code { background: #21262d; padding: 2px 6px; border-radius: 3px; color: #79c0ff; font-size: 0.8rem; }
+
+        textarea {
+            width: 100%; min-height: 160px;
+            padding: 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 0.9rem; font-family: monospace;
+            resize: vertical; line-height: 1.6;
+        }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+
+        .match-highlight {
+            background: rgba(88, 166, 255, 0.25);
+            border-bottom: 2px solid #58a6ff;
+            border-radius: 2px;
+            padding: 0 1px;
+        }
+
+        .results-area {
+            padding: 16px; background: #0d1117; border-radius: 8px;
+            min-height: 100px; font-family: monospace; font-size: 0.9rem;
+            line-height: 1.8;
+        }
+
+        .match-count { font-size: 0.9rem; margin-bottom: 12px; }
+        .match-count .count { color: #58a6ff; font-weight: bold; font-size: 1.1rem; }
+        .match-count .no-match { color: #da3633; }
+
+        .match-item {
+            padding: 10px 14px; background: #161b22;
+            border-radius: 6px; margin-bottom: 8px;
+            border-left: 3px solid #58a6ff;
+        }
+        .match-item .match-text { color: #79c0ff; }
+        .match-item .match-pos { color: #8b949e; font-size: 0.8rem; margin-top: 4px; }
+        .match-item .group { color: #a5d6ff; font-size: 0.85rem; margin-top: 4px; }
+
+        .status-ok { color: #2ea043; }
+        .status-error { color: #da3633; }
+
+        /* Presets */
+        .presets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .preset-btn {
+            padding: 10px 14px; background: #21262d; border: 1px solid #30363d;
+            color: #e6edf3; border-radius: 6px; cursor: pointer;
+            font-size: 0.85rem; text-align: left; transition: all 0.2s;
+        }
+        .preset-btn:hover { border-color: #58a6ff; }
+        .preset-name { font-weight: bold; margin-bottom: 4px; }
+        .preset-pattern { font-family: monospace; color: #79c0ff; font-size: 0.8rem; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            .presets-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🔍 正则表达式测试器</h1>
+        <p class="subtitle">实时测试正则表达式，高亮匹配结果</p>
+
+        <!-- Regex Input -->
+        <div class="card">
+            <div class="card-title">📝 正则表达式</div>
+            <div class="regex-input-row">
+                <span class="regex-slash">/</span>
+                <input type="text" id="regexInput" placeholder="[a-zA-Z]+" oninput="testRegex()">
+                <span class="regex-slash">/</span>
+                <input type="text" id="flagsInput" class="flags-input" value="g" oninput="testRegex()">
+            </div>
+            <div class="flags-row">
+                <label class="flag-checkbox"><input type="checkbox" checked onchange="syncFlags()"> <code>g</code> 全局匹配</label>
+                <label class="flag-checkbox"><input type="checkbox" onchange="syncFlags()"> <code>i</code> 忽略大小写</label>
+                <label class="flag-checkbox"><input type="checkbox" onchange="syncFlags()"> <code>m</code> 多行模式</label>
+                <label class="flag-checkbox"><input type="checkbox" onchange="syncFlags()"> <code>s</code> dotAll 模式</label>
+                <label class="flag-checkbox"><input type="checkbox" onchange="syncFlags()"> <code>u</code> Unicode 模式</label>
+            </div>
+            <div id="regexStatus" style="margin-top:8px;font-size:0.85rem;"></div>
+        </div>
+
+        <!-- Test String -->
+        <div class="card">
+            <div class="card-title">🧪 测试文本</div>
+            <textarea id="testInput" oninput="testRegex()" placeholder="在此输入要测试的文本...">Hello World 你好世界
+email: test@example.com
+phone: 13812345678
+url: https://www.example.com/path?q=hello
+date: 2024-01-15
+price: ¥199.99</textarea>
+        </div>
+
+        <!-- Results -->
+        <div class="card">
+            <div class="card-title">📊 匹配结果</div>
+            <div class="match-count" id="matchCount">等待输入...</div>
+            <div class="results-area" id="results">输入正则表达式和测试文本开始匹配</div>
+        </div>
+
+        <!-- Common Presets -->
+        <div class="card">
+            <div class="card-title">📦 常用正则</div>
+            <div class="presets-grid" id="presetsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        const regexInput = document.getElementById('regexInput');
+        const flagsInput = document.getElementById('flagsInput');
+        const testInput = document.getElementById('testInput');
+        const resultsEl = document.getElementById('results');
+        const matchCountEl = document.getElementById('matchCount');
+        const regexStatus = document.getElementById('regexStatus');
+
+        const presets = [
+            { name: '邮箱地址', pattern: '[\\w.-]+@[\\w.-]+\\.\\w+', flags: 'gi' },
+            { name: '手机号（中国）', pattern: '1[3-9]\\d{9}', flags: 'g' },
+            { name: 'URL', pattern: 'https?://[\\w.-]+(?:/[\\w./?%&=-]*)?', flags: 'gi' },
+            { name: '日期 YYYY-MM-DD', pattern: '\\d{4}-\\d{2}-\\d{2}', flags: 'g' },
+            { name: 'IP 地址', pattern: '\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}', flags: 'g' },
+            { name: '中文字符', pattern: '[\\u4e00-\\u9fff]+', flags: 'g' },
+            { name: '价格（¥$€）', pattern: '[¥$€]\\d+(?:\\.\\d+)?', flags: 'g' },
+            { name: 'HTML 标签', pattern: '<([a-z][a-z0-9]*)\\b[^>]*>(.*?)</\\1>', flags: 'gi' },
+            { name: '身份证（18位）', pattern: '[1-9]\\d{5}(?:19|20)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])\\d{3}[\\dXx]', flags: 'g' },
+            { name: 'HEX 颜色', pattern: '#[0-9a-fA-F]{3,8}\\b', flags: 'g' },
+        ];
+
+        function syncFlags() {
+            const checkboxes = document.querySelectorAll('.flag-checkbox input');
+            const flagLabels = ['g', 'i', 'm', 's', 'u'];
+            let flags = '';
+            checkboxes.forEach((cb, i) => { if (cb.checked) flags += flagLabels[i]; });
+            flagsInput.value = flags;
+            testRegex();
+        }
+
+        function testRegex() {
+            const pattern = regexInput.value;
+            const flags = flagsInput.value;
+            const text = testInput.value;
+
+            if (!pattern) {
+                resultsEl.textContent = '输入正则表达式开始匹配';
+                matchCountEl.textContent = '等待输入...';
+                regexStatus.textContent = '';
+                return;
+            }
+
+            let regex;
+            try {
+                regex = new RegExp(pattern, flags);
+                regexStatus.innerHTML = '<span class="status-ok">✓ 正则表达式有效</span>';
+            } catch (e) {
+                regexStatus.innerHTML = '<span class="status-error">❌ ' + e.message + '</span>';
+                resultsEl.textContent = '修正正则表达式后重试';
+                matchCountEl.textContent = '语法错误';
+                return;
+            }
+
+            const matches = [];
+            let match;
+
+            if (flags.includes('g')) {
+                while ((match = regex.exec(text)) !== null) {
+                    matches.push({
+                        text: match[0],
+                        index: match.index,
+                        end: match.index + match[0].length,
+                        groups: Array.from(match).slice(1)
+                    });
+                    if (match[0].length === 0) regex.lastIndex++;
+                }
+            } else {
+                match = regex.exec(text);
+                if (match) {
+                    matches.push({
+                        text: match[0],
+                        index: match.index,
+                        end: match.index + match[0].length,
+                        groups: Array.from(match).slice(1)
+                    });
+                }
+            }
+
+            // Display results
+            if (matches.length === 0) {
+                matchCountEl.innerHTML = '<span class="no-match">0 个匹配</span>';
+                resultsEl.textContent = '未找到匹配项';
+            } else {
+                matchCountEl.innerHTML = '找到 <span class="count">' + matches.length + '</span> 个匹配';
+                resultsEl.innerHTML = matches.map((m, i) => {
+                    const groupsHtml = m.groups.length > 0
+                        ? m.groups.map((g, gi) => '<div class="group">  组' + (gi+1) + ': ' + escapeHtml(g || '(空)') + '</div>').join('')
+                        : '';
+                    return '<div class="match-item">' +
+                        '<div class="match-text">' + escapeHtml(m.text) + '</div>' +
+                        '<div class="match-pos">位置: ' + m.index + ' - ' + m.end + '</div>' +
+                        groupsHtml +
+                        '</div>';
+                }).join('');
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Render presets
+        const presetsGrid = document.getElementById('presetsGrid');
+        presets.forEach(p => {
+            const btn = document.createElement('button');
+            btn.className = 'preset-btn';
+            btn.innerHTML = '<div class="preset-name">' + p.name + '</div><div class="preset-pattern">' + escapeHtml(p.pattern) + '</div>';
+            btn.addEventListener('click', () => {
+                regexInput.value = p.pattern;
+                flagsInput.value = p.flags;
+                // Sync checkboxes
+                const checkboxes = document.querySelectorAll('.flag-checkbox input');
+                const flagLabels = ['g', 'i', 'm', 's', 'u'];
+                checkboxes.forEach((cb, i) => { cb.checked = p.flags.includes(flagLabels[i]); });
+                testRegex();
+            });
+            presetsGrid.appendChild(btn);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📐 对比度检查器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 700px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        .input-label { font-size: 0.85rem; color: #8b949e; }
+        .color-input-wrap { display: flex; gap: 8px; align-items: center; }
+        input[type="text"] {
+            flex: 1; padding: 12px 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 1rem; font-family: monospace;
+        }
+        input[type="text"]:focus { outline: none; border-color: #58a6ff; }
+        input[type="color"] {
+            width: 48px; height: 44px; border: 1px solid #30363d;
+            border-radius: 8px; background: #0d1117; cursor: pointer;
+            padding: 4px;
+        }
+
+        .swap-btn {
+            display: block; margin: 0 auto 16px;
+            padding: 8px 20px; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; border-radius: 6px; cursor: pointer; font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .swap-btn:hover { background: #30363d; color: #e6edf3; }
+
+        /* Preview */
+        .preview-box {
+            padding: 24px; border-radius: 10px; margin-bottom: 20px;
+            text-align: center;
+        }
+        .preview-large { font-size: 2rem; font-weight: bold; margin-bottom: 8px; }
+        .preview-normal { font-size: 1rem; }
+
+        /* Ratio display */
+        .ratio-display { text-align: center; margin: 20px 0; }
+        .ratio-value { font-size: 3rem; font-weight: bold; color: #58a6ff; }
+        .ratio-label { font-size: 0.85rem; color: #8b949e; margin-top: 4px; }
+
+        /* WCAG Table */
+        .wcag-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .wcag-table th, .wcag-table td {
+            padding: 12px 16px; text-align: left;
+            border-bottom: 1px solid #30363d;
+            font-size: 0.9rem;
+        }
+        .wcag-table th { color: #8b949e; font-weight: 500; }
+        .wcag-table td { color: #e6edf3; }
+        .badge {
+            display: inline-block; padding: 3px 10px; border-radius: 4px;
+            font-size: 0.8rem; font-weight: bold;
+        }
+        .badge-pass { background: #238636; color: white; }
+        .badge-fail { background: #da3633; color: white; }
+
+        /* Info box */
+        .info-box {
+            padding: 16px; background: #0d1117; border-radius: 8px;
+            font-size: 0.85rem; color: #8b949e; line-height: 1.6;
+            margin-top: 16px;
+        }
+        .info-box strong { color: #e6edf3; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            .input-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>📐 对比度检查器</h1>
+        <p class="subtitle">WCAG 2.0 无障碍对比度标准检查</p>
+
+        <!-- Input Card -->
+        <div class="card">
+            <div class="card-title">🎨 颜色输入</div>
+            <div class="input-row">
+                <div class="input-group">
+                    <label class="input-label">前景色（文字）</label>
+                    <div class="color-input-wrap">
+                        <input type="text" id="fgInput" value="#e6edf3" placeholder="#000000">
+                        <input type="color" id="fgPicker" value="#e6edf3">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">背景色</label>
+                    <div class="color-input-wrap">
+                        <input type="text" id="bgInput" value="#0d1117" placeholder="#ffffff">
+                        <input type="color" id="bgPicker" value="#0d1117">
+                    </div>
+                </div>
+            </div>
+            <button class="swap-btn" onclick="swapColors()">⇄ 交换前景/背景色</button>
+        </div>
+
+        <!-- Preview Card -->
+        <div class="card">
+            <div class="card-title">👁️ 效果预览</div>
+            <div class="preview-box" id="previewBox">
+                <div class="preview-large">大号文字标题示例</div>
+                <div class="preview-normal">这是一段正常大小的正文文字，用于测试对比度是否足够清晰可辨。</div>
+            </div>
+
+            <div class="ratio-display">
+                <div class="ratio-value" id="ratioValue">—</div>
+                <div class="ratio-label">对比度比值</div>
+            </div>
+
+            <table class="wcag-table">
+                <thead>
+                    <tr>
+                        <th>标准</th>
+                        <th>大号文字 (≥18pt)</th>
+                        <th>正常文字</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>AA 级</strong></td>
+                        <td id="aaLarge">—</td>
+                        <td id="aaNormal">—</td>
+                    </tr>
+                    <tr>
+                        <td><strong>AAA 级</strong></td>
+                        <td id="aaaLarge">—</td>
+                        <td id="aaaNormal">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card">
+            <div class="card-title">ℹ️ 标准说明</div>
+            <div class="info-box">
+                <p><strong>WCAG 2.0</strong> 定义了文本与背景的最低对比度要求：</p>
+                <br>
+                <p>• <strong>AA 级</strong>：正常文字 ≥ 4.5:1，大号文字 ≥ 3:1</p>
+                <p>• <strong>AAA 级</strong>：正常文字 ≥ 7:1，大号文字 ≥ 4.5:1</p>
+                <br>
+                <p>大号文字指字号 ≥ 18pt (24px) 或 ≥ 14pt (18.66px) 加粗。</p>
+                <p>对比度公式：(L1 + 0.05) / (L2 + 0.05)，其中 L1 是较亮颜色的相对亮度。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === Color Utilities ===
+
+        function hexToRgb(hex) {
+            hex = hex.replace('#', '');
+            if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+            if (hex.length !== 6) return null;
+            const num = parseInt(hex, 16);
+            if (isNaN(num)) return null;
+            return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+        }
+
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(v => {
+                const h = Math.max(0, Math.min(255, Math.round(v))).toString(16);
+                return h.length === 1 ? '0' + h : h;
+            }).join('');
+        }
+
+        // Relative luminance per WCAG 2.0
+        function relativeLuminance(r, g, b) {
+            const sRGB = [r, g, b].map(v => {
+                v = v / 255;
+                return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * sRGB[0] + 0.7152 * sRGB[1] + 0.0722 * sRGB[2];
+        }
+
+        function contrastRatio(lum1, lum2) {
+            const lighter = Math.max(lum1, lum2);
+            const darker = Math.min(lum1, lum2);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+
+        // === UI ===
+
+        const fgInput = document.getElementById('fgInput');
+        const bgInput = document.getElementById('bgInput');
+        const fgPicker = document.getElementById('fgPicker');
+        const bgPicker = document.getElementById('bgPicker');
+        const previewBox = document.getElementById('previewBox');
+
+        function badgeHTML(pass) {
+            return pass
+                ? '<span class="badge badge-pass">✓ 通过</span>'
+                : '<span class="badge badge-fail">✗ 未通过</span>';
+        }
+
+        function update() {
+            let fgRgb = hexToRgb(fgInput.value);
+            let bgRgb = hexToRgb(bgInput.value);
+
+            if (!fgRgb) fgRgb = { r: 0, g: 0, b: 0 };
+            if (!bgRgb) bgRgb = { r: 255, g: 255, b: 255 };
+
+            const fgHex = rgbToHex(fgRgb.r, fgRgb.g, fgRgb.b);
+            const bgHex = rgbToHex(bgRgb.r, bgRgb.g, bgRgb.b);
+
+            // Sync color pickers
+            fgPicker.value = fgHex;
+            bgPicker.value = bgHex;
+
+            // Update preview
+            previewBox.style.color = fgHex;
+            previewBox.style.backgroundColor = bgHex;
+
+            // Calculate contrast
+            const fgLum = relativeLuminance(fgRgb.r, fgRgb.g, fgRgb.b);
+            const bgLum = relativeLuminance(bgRgb.r, bgRgb.g, bgRgb.b);
+            const ratio = contrastRatio(fgLum, bgLum);
+
+            document.getElementById('ratioValue').textContent = ratio.toFixed(2) + ':1';
+
+            // Color the ratio based on AA normal pass
+            const ratioEl = document.getElementById('ratioValue');
+            ratioEl.style.color = ratio >= 4.5 ? '#2ea043' : ratio >= 3 ? '#d7ba7f' : '#da3633';
+
+            // WCAG table
+            document.getElementById('aaLarge').innerHTML = badgeHTML(ratio >= 3);
+            document.getElementById('aaNormal').innerHTML = badgeHTML(ratio >= 4.5);
+            document.getElementById('aaaLarge').innerHTML = badgeHTML(ratio >= 4.5);
+            document.getElementById('aaaNormal').innerHTML = badgeHTML(ratio >= 7);
+        }
+
+        function swapColors() {
+            const tmp = fgInput.value;
+            fgInput.value = bgInput.value;
+            bgInput.value = tmp;
+            update();
+        }
+
+        // Sync text <-> color picker
+        fgInput.addEventListener('input', update);
+        bgInput.addEventListener('input', update);
+        fgPicker.addEventListener('input', () => { fgInput.value = fgPicker.value; update(); });
+        bgPicker.addEventListener('input', () => { bgInput.value = bgPicker.value; update(); });
+
+        // Initial
+        update();
+    </script>
+</body>
+</html>

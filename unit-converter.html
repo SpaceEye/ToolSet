@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>️ 单位换算器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .tab { padding: 8px 16px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #8b949e; cursor: pointer; font-size: 0.85rem; }
+        .tab.active { background: #58a6ff; color: #0d1117; border-color: #58a6ff; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; align-items: center; margin-bottom: 16px; }
+        label { font-size: 0.85rem; color: #8b949e; }
+        input, select { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; color: #e6edf3; }
+        .result { background: #0d1117; border-radius: 8px; padding: 16px; font-family: 'Consolas', monospace; font-size: 1.1rem; color: #79c0ff; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>⚖️ 单位换算器</h1>
+        <p class="subtitle">长度、重量、面积、体积、温度、数据存储等多种单位快速换算</p>
+
+        <div class="card">
+            <div class="card-title">📂 分类</div>
+            <div class="tabs" id="tabs">
+                <div class="tab active" data-cat="length">长度</div>
+                <div class="tab" data-cat="weight">重量</div>
+                <div class="tab" data-cat="area">面积</div>
+                <div class="tab" data-cat="volume">体积</div>
+                <div class="tab" data-cat="temperature">温度</div>
+                <div class="tab" data-cat="data">数据</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"> 换算</div>
+            <div class="form-row">
+                <div><label>数值</label><input type="number" id="value" value="1" step="any" oninput="convert()"></div>
+                <div><label>从</label><select id="from" onchange="convert()"></select></div>
+                <div style="text-align:center; color:#8b949e; align-self:flex-end;">=</div>
+                <div><label>到</label><select id="to" onchange="convert()"></select></div>
+            </div>
+            <div class="result" id="result">1 米 = 100 厘米</div>
+        </div>
+    </div>
+
+    <script>
+        const CATEGORIES = {
+            length: { name: '长度', base: 'm', units: { m: 1, km: 1000, cm: 0.01, mm: 0.001, um: 1e-6, nm: 1e-9, inch: 0.0254, ft: 0.3048, yd: 0.9144, mi: 1609.344 } },
+            weight: { name: '重量', base: 'kg', units: { kg: 1, g: 0.001, mg: 1e-6, t: 1000, lb: 0.45359237, oz: 0.0283495 } },
+            area: { name: '面积', base: 'm2', units: { m2: 1, km2: 1e6, cm2: 1e-4, mm2: 1e-6, ha: 10000, acre: 4046.86 } },
+            volume: { name: '体积', base: 'l', units: { l: 1, ml: 1e-3, m3: 1000, cm3: 1e-3, gal: 3.78541, floz: 0.0295735 } },
+            temperature: { name: '温度', type: 'temp', units: { C: 'C', F: 'F', K: 'K' } },
+            data: { name: '数据', base: 'B', units: { B: 1, KB: 1024, MB: 1024*1024, GB: 1024**3, TB: 1024**4, PB: 1024**5 } }
+        };
+
+        const LABELS = {
+            m: '米 (m)', km: '千米 (km)', cm: '厘米 (cm)', mm: '毫米 (mm)', um: '微米 (μm)', nm: '纳米 (nm)',
+            inch: '英寸 (in)', ft: '英尺 (ft)', yd: '码 (yd)', mi: '英里 (mi)',
+            kg: '千克 (kg)', g: '克 (g)', mg: '毫克 (mg)', t: '吨 (t)', lb: '磅 (lb)', oz: '盎司 (oz)',
+            m2: '平方米 (m²)', km2: '平方千米 (km²)', cm2: '平方厘米 (cm²)', mm2: '平方毫米 (mm²)', ha: '公顷 (ha)', acre: '英亩 (acre)',
+            l: '升 (L)', ml: '毫升 (mL)', m3: '立方米 (m³)', cm3: '立方厘米 (cm³)', gal: '美制加仑 (gal)', floz: '美制液盎司 (fl oz)',
+            C: '摄氏度 (°C)', F: '华氏度 (°F)', K: '开尔文 (K)',
+            B: '字节 (B)', KB: 'KB', MB: 'MB', GB: 'GB', TB: 'TB', PB: 'PB'
+        };
+
+        let currentCat = 'length';
+
+        function selectTab(cat) {
+            currentCat = cat;
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
+            const catData = CATEGORIES[cat];
+            const units = Object.keys(catData.units);
+            const fromSel = document.getElementById('from');
+            const toSel = document.getElementById('to');
+            fromSel.innerHTML = toSel.innerHTML = units.map(u => '<option value="' + u + '">' + (LABELS[u] || u) + '</option>').join('');
+            fromSel.value = units[0];
+            toSel.value = units[1] || units[0];
+            convert();
+        }
+
+        function convert() {
+            const value = parseFloat(document.getElementById('value').value);
+            const from = document.getElementById('from').value;
+            const to = document.getElementById('to').value;
+            const catData = CATEGORIES[currentCat];
+
+            let result;
+            if (catData.type === 'temp') {
+                let c;
+                if (from === 'C') c = value;
+                else if (from === 'F') c = (value - 32) * 5 / 9;
+                else if (from === 'K') c = value - 273.15;
+                if (to === 'C') result = c;
+                else if (to === 'F') result = c * 9 / 5 + 32;
+                else if (to === 'K') result = c + 273.15;
+            } else {
+                const base = catData.units[from];
+                const target = catData.units[to];
+                result = value * base / target;
+            }
+
+            let display = result;
+            if (!Number.isInteger(result)) display = parseFloat(result.toFixed(6));
+            document.getElementById('result').textContent = value + ' ' + (LABELS[from] || from) + ' = ' + display + ' ' + (LABELS[to] || to);
+        }
+
+        document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => selectTab(t.dataset.cat)));
+        document.getElementById('value').addEventListener('input', convert);
+        selectTab('length');
+    </script>
+</body>
+</html>

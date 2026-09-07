@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🆔 UUID 生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .opts { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+        .opt { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: #8b949e; cursor: pointer; }
+        input[type="number"] {
+            width: 90px; padding: 8px 12px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 6px;
+            color: #e6edf3; font-size: 0.9rem;
+        }
+        input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+        .btn {
+            padding: 10px 20px; border-radius: 6px; cursor: pointer;
+            font-size: 0.9rem; border: 1px solid #30363d; transition: all 0.2s;
+        }
+        .btn-primary { background: #1f6feb; color: white; border-color: #1f6feb; }
+        .btn-primary:hover { background: #3a7bd5; }
+        .btn-secondary { background: #21262d; color: #e6edf3; }
+        .btn-secondary:hover { background: #30363d; }
+        .btn-danger { background: #da3633; color: white; border-color: #da3633; }
+        .btn-danger:hover { background: #f85149; }
+
+        .uuid-list { display: grid; gap: 8px; }
+        .uuid-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; background: #0d1117; border-radius: 8px;
+        }
+        .uuid-idx { color: #484f58; font-size: 0.8rem; min-width: 28px; text-align: right; }
+        .uuid-val { font-family: monospace; font-size: 0.88rem; color: #79c0ff; word-break: break-all; flex: 1; }
+        .copy-btn {
+            padding: 4px 10px; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; border-radius: 4px; cursor: pointer; font-size: 0.75rem; flex-shrink: 0;
+        }
+        .copy-btn:hover { background: #30363d; color: #e6edf3; }
+        .copy-btn.copied { background: #238636; color: white; border-color: #238636; }
+        .empty { color: #8b949e; padding: 20px; text-align: center; }
+
+        .info-box { padding: 16px; background: #0d1117; border-radius: 8px; font-size: 0.85rem; color: #8b949e; line-height: 1.6; }
+        .info-box strong { color: #e6edf3; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🆔 UUID 生成器</h1>
+        <p class="subtitle">批量生成 v4 UUID · 一键复制</p>
+
+        <div class="card">
+            <div class="card-title">⚙️ 生成选项</div>
+            <div class="opts">
+                <label class="opt">数量 <input type="number" id="count" min="1" max="100" value="5"></label>
+                <label class="opt"><input type="checkbox" id="uppercase"> 大写</label>
+                <label class="opt"><input type="checkbox" id="nohyphen"> 去除连字符</label>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="generate()">生成</button>
+                <button class="btn btn-secondary" id="copyAllBtn" onclick="copyAll(this)">复制全部</button>
+                <button class="btn btn-danger" onclick="clearAll()">清空</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📋 生成结果 <span id="countLabel" style="color:#8b949e;font-size:0.85rem"></span></div>
+            <div class="uuid-list" id="list">
+                <div class="empty">点击「生成」开始</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">ℹ️ 关于 UUID</div>
+            <div class="info-box">
+                <p><strong>UUID</strong>（通用唯一识别符）是 128 位标识符，通常以 32 位十六进制字符 + 4 个连字符显示。</p>
+                <br>
+                <p>• <strong>v4</strong>：完全随机生成（本工具使用 <code style="color:#79c0ff">crypto.getRandomValues</code>，基于 CSPRNG）</p>
+                <p>• 碰撞概率极低，适合做主键、会话 ID、请求追踪 ID 等</p>
+                <p>• 去除连字符后为 32 位纯十六进制字符串，适合 URL 参数</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let lastUuids = [];
+
+        function genUUID() {
+            if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+            const bytes = crypto.getRandomValues(new Uint8Array(16));
+            bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+            bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 1
+            const h = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+            return h.slice(0,8) + '-' + h.slice(8,12) + '-' + h.slice(12,16) + '-' + h.slice(16,20) + '-' + h.slice(20);
+        }
+
+        function generate() {
+            const countInput = document.getElementById('count');
+            const count = Math.min(100, Math.max(1, parseInt(countInput.value) || 1));
+            countInput.value = count;
+            const upper = document.getElementById('uppercase').checked;
+            const noHyphen = document.getElementById('nohyphen').checked;
+
+            lastUuids = [];
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                let u = genUUID();
+                if (noHyphen) u = u.replace(/-/g, '');
+                if (upper) u = u.toUpperCase();
+                lastUuids.push(u);
+                html += '<div class="uuid-item">' +
+                    '<span class="uuid-idx">' + (i + 1) + '</span>' +
+                    '<span class="uuid-val">' + u + '</span>' +
+                    '<button class="copy-btn" onclick="copyOne(\'' + u + '\', this)">复制</button>' +
+                    '</div>';
+            }
+            document.getElementById('list').innerHTML = html;
+            document.getElementById('countLabel').textContent = '· 共 ' + count + ' 条';
+        }
+
+        function copyOne(val, btn) {
+            navigator.clipboard.writeText(val).then(() => {
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1200);
+            });
+        }
+
+        function copyAll(btn) {
+            if (!lastUuids.length) return;
+            navigator.clipboard.writeText(lastUuids.join('\n')).then(() => {
+                btn.textContent = '已复制 ' + lastUuids.length + ' 条';
+                setTimeout(() => { btn.textContent = '复制全部'; }, 1500);
+            });
+        }
+
+        function clearAll() {
+            lastUuids = [];
+            document.getElementById('list').innerHTML = '<div class="empty">点击「生成」开始</div>';
+            document.getElementById('countLabel').textContent = '';
+        }
+    </script>
+</body>
+</html>

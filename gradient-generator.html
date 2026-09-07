@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✨ 渐变生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 750px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 32px; font-size: 2rem; color: #58a6ff; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        /* Preview */
+        .gradient-preview {
+            width: 100%;
+            height: 180px;
+            border-radius: 10px;
+            border: 2px solid #30363d;
+            margin-bottom: 20px;
+        }
+
+        /* Controls */
+        .control-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .control-group { flex: 1; min-width: 120px; }
+        .control-label { font-size: 0.85rem; color: #8b949e; margin-bottom: 6px; display: block; }
+        select, input[type="range"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            color: #e6edf3;
+            font-size: 0.9rem;
+        }
+        select:focus { outline: none; border-color: #58a6ff; }
+        input[type="range"] {
+            padding: 0; height: 8px; border: none;
+            -webkit-appearance: none; background: #21262d; border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 18px; height: 18px;
+            border-radius: 50%; background: #58a6ff; cursor: pointer;
+            border: 2px solid #0d1117;
+        }
+        .range-value { font-size: 0.85rem; color: #58a6ff; text-align: right; margin-top: 4px; }
+
+        /* Color Stops */
+        .stops-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+        .stop-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; background: #0d1117; border-radius: 8px;
+        }
+        .stop-color-picker {
+            width: 36px; height: 36px; border: 1px solid #30363d;
+            border-radius: 6px; padding: 2px; cursor: pointer; background: transparent;
+        }
+        .stop-hex { font-family: monospace; font-size: 0.9rem; color: #e6edf3; min-width: 70px; }
+        .stop-position { flex: 1; }
+        .stop-position input[type="range"] { width: 100%; }
+        .stop-position-label { font-size: 0.75rem; color: #8b949e; text-align: right; }
+        .stop-remove {
+            padding: 6px 10px; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; border-radius: 4px; cursor: pointer; font-size: 0.8rem;
+        }
+        .stop-remove:hover { background: #da3633; color: white; border-color: #da3633; }
+
+        .add-stop-btn {
+            width: 100%; padding: 10px; background: #21262d;
+            border: 1px dashed #30363d; color: #8b949e; border-radius: 8px;
+            cursor: pointer; font-size: 0.9rem; transition: all 0.2s;
+        }
+        .add-stop-btn:hover { background: #30363d; color: #e6edf3; border-color: #58a6ff; }
+
+        /* Code output */
+        .code-box {
+            position: relative;
+            padding: 16px;
+            background: #0d1117;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #79c0ff;
+            word-break: break-all;
+            line-height: 1.6;
+        }
+        .copy-btn {
+            position: absolute; top: 10px; right: 10px;
+            padding: 6px 14px; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+        }
+        .copy-btn:hover { background: #30363d; color: #e6edf3; }
+        .copy-btn.copied { background: #238636; color: white; border-color: #238636; }
+
+        /* Presets */
+        .presets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
+        .preset-swatch {
+            height: 50px; border-radius: 8px; cursor: pointer;
+            border: 2px solid transparent; transition: all 0.2s;
+        }
+        .preset-swatch:hover { border-color: #58a6ff; transform: scale(1.05); }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>✨ 渐变生成器</h1>
+
+        <!-- Preview -->
+        <div class="card">
+            <div class="card-title">👁️ 预览</div>
+            <div class="gradient-preview" id="preview"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card">
+            <div class="card-title">⚙️ 渐变类型与方向</div>
+            <div class="control-row">
+                <div class="control-group">
+                    <label class="control-label">类型</label>
+                    <select id="typeSelect">
+                        <option value="linear">线性渐变</option>
+                        <option value="radial">径向渐变</option>
+                        <option value="conic">圆锥渐变</option>
+                    </select>
+                </div>
+                <div class="control-group" id="angleGroup">
+                    <label class="control-label">角度</label>
+                    <input type="range" id="angleSlider" min="0" max="360" value="90">
+                    <div class="range-value" id="angleValue">90°</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Color Stops -->
+        <div class="card">
+            <div class="card-title">🎨 颜色节点</div>
+            <div class="stops-list" id="stopsList"></div>
+            <button class="add-stop-btn" onclick="addStop()">+ 添加颜色节点</button>
+        </div>
+
+        <!-- CSS Code -->
+        <div class="card">
+            <div class="card-title">📋 CSS 代码</div>
+            <div class="code-box" id="codeBox">
+                <button class="copy-btn" onclick="copyCode(this)">复制</button>
+                <span id="codeOutput"></span>
+            </div>
+        </div>
+
+        <!-- Presets -->
+        <div class="card">
+            <div class="card-title">🌈 预设渐变</div>
+            <div class="presets-grid" id="presetsGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let stops = [
+            { color: '#58a6ff', position: 0 },
+            { color: '#a371f7', position: 100 }
+        ];
+
+        const typeSelect = document.getElementById('typeSelect');
+        const angleSlider = document.getElementById('angleSlider');
+        const angleValue = document.getElementById('angleValue');
+        const angleGroup = document.getElementById('angleGroup');
+        const preview = document.getElementById('preview');
+
+        // Presets
+        const presets = [
+            { stops: [{ color: '#58a6ff', position: 0 }, { color: '#a371f7', position: 100 }], angle: 90, type: 'linear' },
+            { stops: [{ color: '#f778ba', position: 0 }, { color: '#ff6a00', position: 100 }], angle: 90, type: 'linear' },
+            { stops: [{ color: '#2ea043', position: 0 }, { color: '#58a6ff', position: 100 }], angle: 135, type: 'linear' },
+            { stops: [{ color: '#f9eb7a', position: 0 }, { color: '#fa8c16', position: 50 }, { color: '#e17055', position: 100 }], angle: 90, type: 'linear' },
+            { stops: [{ color: '#0d1117', position: 0 }, { color: '#30363d', position: 100 }], angle: 180, type: 'linear' },
+            { stops: [{ color: '#58a6ff', position: 0 }, { color: '#2ea043', position: 50 }, { color: '#f9eb7a', position: 100 }], angle: 90, type: 'linear' },
+            { stops: [{ color: '#a371f7', position: 0 }, { color: '#f778ba', position: 50 }, { color: '#ff6a00', position: 100 }], angle: 45, type: 'linear' },
+            { stops: [{ color: '#083fa9', position: 0 }, { color: '#58a6ff', position: 50 }, { color: '#79c0ff', position: 100 }], angle: 90, type: 'radial' },
+        ];
+
+        function buildGradientCSS() {
+            const type = typeSelect.value;
+            const angle = parseInt(angleSlider.value);
+            const sorted = [...stops].sort((a, b) => a.position - b.position);
+            const stopsStr = sorted.map(s => `${s.color} ${s.position}%`).join(', ');
+
+            if (type === 'linear') {
+                return `linear-gradient(${angle}deg, ${stopsStr})`;
+            } else if (type === 'radial') {
+                return `radial-gradient(circle, ${stopsStr})`;
+            } else {
+                return `conic-gradient(from ${angle}deg, ${stopsStr})`;
+            }
+        }
+
+        function render() {
+            const css = buildGradientCSS();
+            preview.style.background = css;
+            document.getElementById('codeOutput').textContent = `background: ${css};`;
+
+            // Show/hide angle
+            const showAngle = typeSelect.value !== 'radial';
+            angleGroup.style.display = showAngle ? 'block' : 'none';
+        }
+
+        function renderStops() {
+            const list = document.getElementById('stopsList');
+            list.innerHTML = '';
+            stops.forEach((stop, i) => {
+                const row = document.createElement('div');
+                row.className = 'stop-row';
+                row.innerHTML = `
+                    <input type="color" class="stop-color-picker" value="${stop.color}" data-idx="${i}">
+                    <span class="stop-hex">${stop.color}</span>
+                    <div class="stop-position">
+                        <input type="range" min="0" max="100" value="${stop.position}" data-idx="${i}" class="stop-range">
+                        <div class="stop-position-label">${stop.position}%</div>
+                    </div>
+                    <button class="stop-remove" onclick="removeStop(${i})" ${stops.length <= 2 ? 'disabled style="opacity:0.3;cursor:default"' : ''}>✕</button>
+                `;
+                list.appendChild(row);
+            });
+
+            // Event listeners
+            list.querySelectorAll('.stop-color-picker').forEach(el => {
+                el.addEventListener('input', (e) => {
+                    const idx = parseInt(el.dataset.idx);
+                    stops[idx].color = el.value;
+                    renderStops();
+                    render();
+                });
+            });
+            list.querySelectorAll('.stop-range').forEach(el => {
+                el.addEventListener('input', (e) => {
+                    const idx = parseInt(el.dataset.idx);
+                    stops[idx].position = parseInt(el.value);
+                    el.nextElementSibling.textContent = el.value + '%';
+                    render();
+                });
+            });
+        }
+
+        function addStop() {
+            if (stops.length >= 6) return;
+            const randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+            stops.push({ color: randomColor, position: 50 });
+            renderStops();
+            render();
+        }
+
+        function removeStop(idx) {
+            if (stops.length <= 2) return;
+            stops.splice(idx, 1);
+            renderStops();
+            render();
+        }
+
+        function copyCode(btn) {
+            const css = `background: ${buildGradientCSS()};`;
+            navigator.clipboard.writeText(css).then(() => {
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1500);
+            });
+        }
+
+        function loadPreset(preset) {
+            stops = preset.stops.map(s => ({ ...s }));
+            typeSelect.value = preset.type;
+            angleSlider.value = preset.angle;
+            angleValue.textContent = preset.angle + '°';
+            renderStops();
+            render();
+        }
+
+        // Events
+        typeSelect.addEventListener('change', render);
+        angleSlider.addEventListener('input', () => {
+            angleValue.textContent = angleSlider.value + '°';
+            render();
+        });
+
+        // Render presets
+        const presetsGrid = document.getElementById('presetsGrid');
+        presets.forEach((p, i) => {
+            const swatch = document.createElement('div');
+            swatch.className = 'preset-swatch';
+            const sorted = [...p.stops].sort((a, b) => a.position - b.position);
+            const stopsStr = sorted.map(s => `${s.color} ${s.position}%`).join(', ');
+            if (p.type === 'radial') {
+                swatch.style.background = `radial-gradient(circle, ${stopsStr})`;
+            } else {
+                swatch.style.background = `linear-gradient(${p.angle}deg, ${stopsStr})`;
+            }
+            swatch.addEventListener('click', () => loadPreset(p));
+            presetsGrid.appendChild(swatch);
+        });
+
+        // Initial
+        renderStops();
+        render();
+    </script>
+</body>
+</html>

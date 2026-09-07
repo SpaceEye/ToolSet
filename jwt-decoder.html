@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> JWT 解码器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        textarea {
+            width: 100%; min-height: 130px;
+            padding: 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 0.88rem; font-family: monospace;
+            resize: vertical; line-height: 1.6;
+        }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .btn {
+            padding: 10px 20px; border-radius: 6px; cursor: pointer;
+            font-size: 0.9rem; border: 1px solid #30363d; transition: all 0.2s;
+        }
+        .btn-primary { background: #1f6feb; color: white; border-color: #1f6feb; }
+        .btn-primary:hover { background: #3a7bd5; }
+        .btn-secondary { background: #21262d; color: #e6edf3; }
+        .btn-secondary:hover { background: #30363d; }
+
+        .json-box {
+            padding: 14px; background: #0d1117; border-radius: 8px;
+            font-family: monospace; font-size: 0.85rem; line-height: 1.6;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        .j-key { color: #79c0ff; }
+        .j-str { color: #a5d6ff; }
+        .j-num { color: #f9e2af; }
+        .j-bool { color: #ff7b72; }
+        .j-null { color: #ff7b72; }
+
+        .section { margin-bottom: 20px; }
+        .section-label {
+            font-size: 0.85rem; color: #8b949e; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .section-label .copy-btn {
+            margin-left: auto; padding: 3px 10px; background: #21262d;
+            border: 1px solid #30363d; color: #8b949e; border-radius: 4px;
+            cursor: pointer; font-size: 0.72rem;
+        }
+        .section-label .copy-btn:hover { background: #30363d; color: #e6edf3; }
+
+        .claims-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .claims-table td {
+            padding: 10px 12px; border-bottom: 1px solid #21262d;
+            font-size: 0.88rem;
+        }
+        .claims-table td:first-child { color: #8b949e; font-family: monospace; white-space: nowrap; }
+        .claims-table td:last-child { font-family: monospace; color: #79c0ff; }
+
+        .warn-expired { color: #da3633; }
+        .ok-valid { color: #2ea043; }
+
+        .status-ok { color: #2ea043; font-size: 0.85rem; margin-top: 10px; }
+        .status-error { color: #da3633; font-size: 0.85rem; margin-top: 10px; }
+
+        .info-box { padding: 16px; background: #0d1117; border-radius: 8px; font-size: 0.85rem; color: #8b949e; line-height: 1.6; }
+        .info-box strong { color: #e6edf3; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🎫 JWT 解码器</h1>
+        <p class="subtitle">解析 JSON Web Token 的 Header 与 Payload，检查有效期</p>
+
+        <div class="card">
+            <div class="card-title">📋 输入 Token</div>
+            <textarea id="tokenInput" placeholder="粘贴 JWT token（三段式：xxx.yyy.zzz）" oninput="tryAutoDecode()"></textarea>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="decode()">解码</button>
+                <button class="btn btn-secondary" onclick="loadSample()">载入示例 Token</button>
+            </div>
+            <div id="status"></div>
+        </div>
+
+        <div class="card" id="resultCard" style="display:none">
+            <div class="section">
+                <div class="section-label">
+                    🔑 Header
+                    <button class="copy-btn" onclick="copyRaw('headerRaw', this)">复制原始</button>
+                </div>
+                <div class="json-box" id="headerBox"></div>
+            </div>
+            <div class="section">
+                <div class="section-label">
+                    📦 Payload
+                    <button class="copy-btn" onclick="copyRaw('payloadRaw', this)">复制原始</button>
+                </div>
+                <div class="json-box" id="payloadBox"></div>
+                <table class="claims-table" id="claimsTable"></table>
+            </div>
+            <div class="section">
+                <div class="section-label">
+                    ✍️ Signature
+                    <button class="copy-btn" onclick="copyRaw('sigRaw', this)">复制原始</button>
+                </div>
+                <div class="json-box" id="sigBox"></div>
+                <p style="color:#d29922;font-size:0.8rem;margin-top:8px">⚠️ 签名仅做展示，本工具不验证签名真伪（需要服务端密钥）</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">ℹ️ 关于 JWT</div>
+            <div class="info-box">
+                <p><strong>JWT</strong>（JSON Web Token）由三部分组成，以 <code style="color:#79c0ff">.</code> 分隔：<strong>Header.Payload.Signature</strong>，前两部分为 base64url 编码的 JSON。</p>
+                <br>
+                <p>• <strong>Header</strong>：算法（alg）与类型（typ）</p>
+                <p>• <strong>Payload</strong>：声明（claims），如 sub、name、exp、iat 等</p>
+                <p>• <strong>Signature</strong>：对前两部分的签名，用于防伪</p>
+                <br>
+                <p><span class="warn-expired">注意</span>：Payload 只是编码而非加密，<strong>不要在其中存放敏感信息</strong>。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let rawStore = { headerRaw: '', payloadRaw: '', sigRaw: '' };
+
+        function b64urlDecode(s) {
+            s = s.replace(/-/g, '+').replace(/_/g, '/');
+            while (s.length % 4) s += '=';
+            return decodeURIComponent(escape(atob(s)));
+        }
+
+        function b64urlEncode(s) {
+            return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        function makeSampleToken() {
+            const header = { alg: 'HS256', typ: 'JWT' };
+            const now = Math.floor(Date.now() / 1000);
+            const payload = {
+                sub: '1234567890',
+                name: '张三',
+                email: 'zhangsan@example.com',
+                role: 'admin',
+                iat: now - 3600,
+                nbf: now - 3600,
+                exp: now + 3599
+            };
+            const h = b64urlEncode(JSON.stringify(header));
+            const p = b64urlEncode(JSON.stringify(payload));
+            return h + '.' + p + '.' + b64urlEncode('demo-signature-not-verified');
+        }
+
+        // 纯逻辑（可测试）
+        function decodeJWT(token) {
+            const out = { ok: false, error: '', header: null, payload: null, headerRaw: '', payloadRaw: '', sigRaw: '' };
+            const t = String(token).trim();
+            if (!t) { out.error = '请输入 token'; return out; }
+            const parts = t.split('.');
+            if (parts.length < 2) { out.error = '格式错误：JWT 应包含至少两段（用 . 分隔）'; return out; }
+            if (parts.length > 3) { out.error = '格式错误：JWT 应恰好三段（header.payload.signature）'; return out; }
+
+            try {
+                out.headerRaw = parts[0];
+                out.payloadRaw = parts[1];
+                out.sigRaw = parts[2] || '';
+                out.header = JSON.parse(b64urlDecode(parts[0]));
+                out.payload = JSON.parse(b64urlDecode(parts[1]));
+                out.ok = true;
+            } catch (e) {
+                out.error = '解码失败：' + e.message;
+            }
+            return out;
+        }
+
+        function highlightJSON(obj) {
+            const json = JSON.stringify(obj, null, 2)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return json.replace(
+                /("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                function(m) {
+                    let cls = 'j-num';
+                    if (/^"/.test(m)) cls = /:$/.test(m) ? 'j-key' : 'j-str';
+                    else if (/true|false/.test(m)) cls = 'j-bool';
+                    else if (/null/.test(m)) cls = 'j-null';
+                    return '<span class="' + cls + '">' + m + '</span>';
+                }
+            );
+        }
+
+        function fmtTime(ts) {
+            const d = new Date(ts * 1000);
+            return d.toLocaleString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false, timeZone: undefined });
+        }
+
+        function decode() {
+            const r = decodeJWT(document.getElementById('tokenInput').value);
+            const statusEl = document.getElementById('status');
+            const card = document.getElementById('resultCard');
+
+            if (!r.ok) {
+                statusEl.innerHTML = '<div class="status-error">❌ ' + r.error + '</div>';
+                card.style.display = 'none';
+                return;
+            }
+
+            const now = Math.floor(Date.now() / 1000);
+            statusEl.innerHTML = '<div class="status-ok">✓ 解码成功 · Header: ' +
+                (r.header.alg || '未知算法') + ' · ' + (r.header.typ || '无类型') + '</div>';
+            card.style.display = 'block';
+
+            document.getElementById('headerBox').innerHTML = highlightJSON(r.header);
+            document.getElementById('payloadBox').innerHTML = highlightJSON(r.payload);
+            document.getElementById('sigBox').textContent = r.sigRaw || '(无签名段)';
+            rawStore = { headerRaw: r.headerRaw, payloadRaw: r.payloadRaw, sigRaw: r.sigRaw };
+
+            // 时间类 claims
+            const p = r.payload || {};
+            const rows = [];
+            if (p.iat !== undefined) rows.push(['iat（签发时间）', fmtTime(p.iat)]);
+            if (p.nbf !== undefined) rows.push(['nbf（生效时间）', fmtTime(p.nbf)]);
+            if (p.exp !== undefined) {
+                const left = p.exp - now;
+                const label = left >= 0
+                    ? '<span class="ok-valid">有效 · 剩余 ' + fmtDur(left) + '</span>'
+                    : '<span class="warn-expired">⚠️ 已过期 ' + fmtDur(-left) + '</span>';
+                rows.push(['exp（过期时间）', fmtTime(p.exp) + '　' + label]);
+            }
+            document.getElementById('claimsTable').innerHTML = rows.map(function(row) {
+                return '<tr><td>' + row[0] + '</td><td>' + row[1] + '</td></tr>';
+            }).join('');
+        }
+
+        function fmtDur(s) {
+            if (s < 60) return s + ' 秒';
+            if (s < 3600) return Math.floor(s / 60) + ' 分钟 ' + (s % 60) + ' 秒';
+            if (s < 86400) return Math.floor(s / 3600) + ' 小时 ' + Math.floor(s % 3600 / 60) + ' 分钟';
+            return Math.floor(s / 86400) + ' 天 ' + Math.floor(s % 86400 / 3600) + ' 小时';
+        }
+
+        let autoTimer = null;
+        function tryAutoDecode() {
+            clearTimeout(autoTimer);
+            const v = document.getElementById('tokenInput').value.trim();
+            if (v && v.split('.').length === 3) {
+                autoTimer = setTimeout(decode, 400);
+            }
+        }
+
+        function loadSample() {
+            document.getElementById('tokenInput').value = makeSampleToken();
+            decode();
+        }
+
+        function copyRaw(key, btn) {
+            navigator.clipboard.writeText(rawStore[key] || '').then(function() {
+                btn.textContent = '已复制';
+                setTimeout(function() { btn.textContent = '复制原始'; }, 1200);
+            });
+        }
+    </script>
+</body>
+</html>

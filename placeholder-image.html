@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖼️ 占位图片生成器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        label { font-size: 0.85rem; color: #8b949e; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; color: #e6edf3; }
+        input[type="color"] { padding: 2px; height: 40px; }
+        .btn { padding: 10px 18px; background: #238636; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.9rem; }
+        .btn:hover { background: #2ea043; }
+        .btn-secondary { background: #21262d; color: #79c0ff; border: 1px solid #30363d; }
+        .preview { display: flex; justify-content: center; align-items: center; padding: 20px; background: #0d1117; border-radius: 8px; min-height: 220px; }
+        .preview canvas { max-width: 100%; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .url-box { background: #0d1117; border-radius: 8px; padding: 12px; font-family: 'Consolas', monospace; font-size: 0.85rem; color: #79c0ff; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🖼️ 占位图片生成器</h1>
+        <p class="subtitle">快速生成带尺寸标注的占位图片，用于 UI 原型和演示</p>
+
+        <div class="card">
+            <div class="card-title">⚙️ 设置</div>
+            <div class="form-row">
+                <div><label>宽度 (px)</label><input type="number" id="width" value="800" min="50" max="4000"></div>
+                <div><label>高度 (px)</label><input type="number" id="height" value="400" min="50" max="4000"></div>
+                <div><label>背景色</label><input type="color" id="bgColor" value="#30363d"></div>
+                <div><label>文字颜色</label><input type="color" id="textColor" value="#e6edf3"></div>
+                <div><label>文字内容</label><input type="text" id="customText" value="" placeholder="默认显示尺寸"></div>
+            </div>
+            <div class="btn-row">
+                <button class="btn" onclick="generate()">生成图片</button>
+                <button class="btn btn-secondary" onclick="downloadImage()">下载 PNG</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">️ 预览</div>
+            <div class="preview" id="preview"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">🔗 URL（可用作 &lt;img src&gt;）</div>
+            <div class="url-box" id="urlBox">-</div>
+        </div>
+    </div>
+
+    <script>
+        function generate() {
+            const w = parseInt(document.getElementById('width').value) || 800;
+            const h = parseInt(document.getElementById('height').value) || 400;
+            const bg = document.getElementById('bgColor').value;
+            const fg = document.getElementById('textColor').value;
+            const custom = document.getElementById('customText').value.trim();
+
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+
+            // 背景
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, w, h);
+
+            // 边框虚线
+            ctx.strokeStyle = fg;
+            ctx.globalAlpha = 0.3;
+            ctx.setLineDash([10, 10]);
+            ctx.strokeRect(20, 20, w - 40, h - 40);
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 1;
+
+            // 文字
+            const text = custom || (w + ' × ' + h);
+            ctx.fillStyle = fg;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const fontSize = Math.max(16, Math.min(w, h) / 12);
+            ctx.font = 'bold ' + fontSize + 'px "Segoe UI", sans-serif';
+            ctx.fillText(text, w / 2, h / 2);
+
+            // 尺寸小字
+            if (custom) {
+                ctx.font = (fontSize * 0.4) + 'px "Segoe UI", sans-serif';
+                ctx.globalAlpha = 0.7;
+                ctx.fillText(w + ' × ' + h, w / 2, h / 2 + fontSize * 0.8);
+            }
+
+            const container = document.getElementById('preview');
+            container.innerHTML = '';
+            container.appendChild(canvas);
+
+            document.getElementById('urlBox').textContent = canvas.toDataURL('image/png');
+        }
+
+        function downloadImage() {
+            const canvas = document.querySelector('#preview canvas');
+            if (!canvas) return;
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'placeholder-' + canvas.width + 'x' + canvas.height + '.png';
+            a.click();
+        }
+
+        generate();
+    </script>
+</body>
+</html>

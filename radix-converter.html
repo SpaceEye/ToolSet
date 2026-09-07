@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔢 进制转换器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .input-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        input[type="text"] {
+            flex: 1; min-width: 200px; padding: 12px 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 1.05rem; font-family: monospace;
+        }
+        input[type="text"]:focus { outline: none; border-color: #58a6ff; }
+        select {
+            padding: 12px 16px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 0.95rem; cursor: pointer;
+        }
+
+        .result-grid { display: grid; gap: 10px; }
+        .result-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 16px; background: #0d1117; border-radius: 8px;
+        }
+        .result-label { color: #8b949e; font-size: 0.85rem; min-width: 110px; flex-shrink: 0; }
+        .result-value {
+            color: #79c0ff; font-family: monospace; font-size: 0.95rem;
+            word-break: break-all; flex: 1; letter-spacing: 0.5px;
+        }
+        .copy-btn {
+            padding: 4px 12px; background: #21262d; border: 1px solid #30363d;
+            color: #8b949e; border-radius: 4px; cursor: pointer; font-size: 0.75rem; flex-shrink: 0;
+        }
+        .copy-btn:hover { background: #30363d; color: #e6edf3; }
+        .copy-btn.copied { background: #238636; color: white; border-color: #238636; }
+
+        .status-ok { color: #2ea043; font-size: 0.85rem; margin-top: 10px; }
+        .status-error { color: #da3633; font-size: 0.85rem; margin-top: 10px; }
+
+        .bit-block {
+            margin-top: 16px; padding: 16px; background: #0d1117; border-radius: 8px;
+        }
+        .bit-block-title { font-size: 0.85rem; color: #8b949e; margin-bottom: 10px; }
+        .bit-row { display: flex; flex-wrap: wrap; gap: 6px; }
+        .byte-cell {
+            background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+            padding: 8px 10px; font-family: monospace; font-size: 0.9rem; color: #a5d6ff;
+        }
+        .byte-cell .byte-hex { display: block; font-size: 0.7rem; color: #8b949e; margin-top: 4px; }
+
+        .info-box { padding: 16px; background: #0d1117; border-radius: 8px; font-size: 0.85rem; color: #8b949e; line-height: 1.6; }
+        .info-box strong { color: #e6edf3; }
+
+        @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            .result-label { min-width: 90px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🔢 进制转换器</h1>
+        <p class="subtitle">二进制 · 八进制 · 十进制 · 十六进制 实时互转，32 位范围内</p>
+
+        <div class="card">
+            <div class="card-title">📝 输入数值</div>
+            <div class="input-row">
+                <input type="text" id="numInput" placeholder="输入数值，支持负号" value="255" oninput="convert()">
+                <select id="baseSel" onchange="convert()">
+                    <option value="10">十进制 (10)</option>
+                    <option value="2">二进制 (2)</option>
+                    <option value="16">十六进制 (16)</option>
+                    <option value="8">八进制 (8)</option>
+                </select>
+            </div>
+            <div id="status"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📤 各进制表示</div>
+            <div class="result-grid" id="results"></div>
+            <div class="bit-block" id="bitBlock" style="display:none">
+                <div class="bit-block-title" id="bitTitle"></div>
+                <div class="bit-row" id="bitRow"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">ℹ️ 说明</div>
+            <div class="info-box">
+                <p>支持 <strong>32 位有符号整数</strong> 范围（-2147483648 ~ 2147483647）。负数以 <strong>32 位补码</strong> 显示二进制形式，并额外提供按字节分组的位图视图，方便查看内存布局。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function groupBin(b) {
+            const parts = [];
+            for (let i = b.length; i > 0; i -= 4) parts.unshift(b.slice(Math.max(0, i - 4), i));
+            return parts.join(' ');
+        }
+
+        // 纯逻辑函数（可测试）：raw 为字符串，base 为 2/8/10/16
+        function convertRadix(raw, base) {
+            const out = { ok: false, error: '', value: 0, sign: '', bin: '', oct: '', dec: '', hex: '', bin32: '' };
+            let s = String(raw).trim();
+            if (!s) { out.error = '请输入数值'; return out; }
+            let sign = '';
+            if (s[0] === '-' || s[0] === '+') { sign = s[0] === '-' ? '-' : ''; s = s.slice(1); }
+            const low = s.toLowerCase();
+            if (!/^[0-9a-f]+$/.test(low)) { out.error = '包含非法字符（仅允许数字和 a-f）'; return out; }
+            for (const c of low) {
+                const v = c <= '9' ? c.charCodeAt(0) - 48 : c.charCodeAt(0) - 87;
+                if (v < 0 || v >= base) { out.error = '字符 ' + c + ' 超出 ' + base + ' 进制范围'; return out; }
+            }
+            let value = parseInt(low, base);
+            if (value > 0x7FFFFFFF) { out.error = '数值超出 32 位范围（最大 2147483647）'; return out; }
+            if (sign === '-') {
+                if (value > 0x80000000) { out.error = '数值超出 32 位范围（最小 -2147483648）'; return out; }
+                value = -value;
+            }
+            out.ok = true;
+            out.value = value;
+            out.sign = sign;
+            out.dec = String(value);
+            out.hex = (sign + value.toString(16).toUpperCase());
+            out.oct = (sign + value.toString(8));
+            if (value < 0) {
+                const u = value >>> 0; // 32 位补码
+                out.bin = '−' + groupBin(u.toString(2).padStart(32, '0'));
+                out.bin32 = u.toString(2).padStart(32, '0');
+            } else {
+                out.bin = groupBin(value.toString(2));
+                out.bin32 = value.toString(2).padStart(32, '0');
+            }
+            return out;
+        }
+
+        function convert() {
+            const raw = document.getElementById('numInput').value;
+            const base = parseInt(document.getElementById('baseSel').value);
+            const r = convertRadix(raw, base);
+            const statusEl = document.getElementById('status');
+            const results = document.getElementById('results');
+            const bitBlock = document.getElementById('bitBlock');
+
+            if (!r.ok) {
+                statusEl.innerHTML = '<div class="status-error">❌ ' + r.error + '</div>';
+                results.innerHTML = '';
+                bitBlock.style.display = 'none';
+                return;
+            }
+
+            statusEl.innerHTML = '<div class="status-ok">✓ 有效 · 十进制值: ' + r.dec + ' · ' +
+                (r.value < 0 ? '负数，二进制为 32 位补码' : '共 ' + r.bin32.replace(/^0+/, '').length + ' 个有效位') + '</div>';
+
+            const rows = [
+                { label: '二进制 (2)', value: r.bin },
+                { label: '八进制 (8)', value: r.oct },
+                { label: '十进制 (10)', value: r.dec },
+                { label: '十六进制 (16)', value: r.hex },
+            ];
+            results.innerHTML = rows.map(x =>
+                '<div class="result-row">' +
+                '<span class="result-label">' + x.label + '</span>' +
+                '<span class="result-value">' + escapeHtml(x.value) + '</span>' +
+                '<button class="copy-btn" onclick="copyVal(\'' + escapeAttr(x.value) + '\', this)">复制</button>' +
+                '</div>'
+            ).join('');
+
+            // 字节位图
+            bitBlock.style.display = 'block';
+            document.getElementById('bitTitle').textContent = '32 位内存布局（按字节分组）';
+            const bytes = [];
+            for (let i = 7; i >= 0; i--) {
+                const b = (parseInt(r.bin32, 2) >> (i * 8)) & 0xFF;
+                bytes.push(b);
+            }
+            document.getElementById('bitRow').innerHTML = bytes.map((b, i) => {
+                const bin8 = b.toString(2).padStart(8, '0');
+                const hex8 = b.toString(16).toUpperCase().padStart(2, '0');
+                return '<div class="byte-cell">' + bin8.slice(0,4) + ' ' + bin8.slice(4) +
+                    '<span class="byte-hex">0x' + hex8 + ' · 字节' + i + '</span></div>';
+            }).join('');
+        }
+
+        function copyVal(val, btn) {
+            navigator.clipboard.writeText(val).then(() => {
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 1200);
+            });
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        function escapeAttr(s) {
+            return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/−/g, '-');
+        }
+
+        convert();
+    </script>
+</body>
+</html>

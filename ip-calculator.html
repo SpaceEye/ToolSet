@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> IP 地址计算器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d1117; color: #e6edf3; font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+        input, select { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 10px; color: #e6edf3; font-family: 'Consolas', monospace; }
+        input:focus, select:focus { outline: none; border-color: #58a6ff; }
+        .btn { padding: 10px 18px; background: #238636; border: none; border-radius: 6px; color: #fff; cursor: pointer; font-size: 0.9rem; }
+        .btn:hover { background: #2ea043; }
+        .info-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .info-table td { padding: 10px; border-bottom: 1px solid #30363d; }
+        .info-table td:first-child { color: #8b949e; width: 160px; }
+        .info-table td:last-child { font-family: 'Consolas', monospace; color: #79c0ff; word-break: break-all; }
+        .status { margin-top: 12px; font-size: 0.85rem; min-height: 20px; }
+        .status-error { color: #da3633; }
+        .status-ok { color: #2ea043; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>🌐 IP 地址计算器</h1>
+        <p class="subtitle">计算 IP 地址、子网掩码、网络地址、广播地址和可用主机范围</p>
+
+        <div class="card">
+            <div class="card-title">⚙️ 输入 CIDR</div>
+            <div class="form-row">
+                <div><label style="display:block; margin-bottom:4px; color:#8b949e; font-size:0.85rem;">IP 地址</label><input type="text" id="ipInput" value="192.168.1.1" placeholder="例如 192.168.1.1"></div>
+                <div><label style="display:block; margin-bottom:4px; color:#8b949e; font-size:0.85rem;">掩码前缀</label><select id="prefixInput">
+                    <option value="24" selected>/24</option>
+                    <option value="16">/16</option>
+                    <option value="8">/8</option>
+                    <option value="30">/30</option>
+                    <option value="28">/28</option>
+                    <option value="26">/26</option>
+                    <option value="20">/20</option>
+                </select></div>
+                <button class="btn" onclick="calculate()">计算</button>
+            </div>
+            <div id="status" class="status"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">📊 计算结果</div>
+            <table class="info-table" id="resultTable">
+                <tr><td>IP 地址</td><td id="rIp">-</td></tr>
+                <tr><td>子网掩码</td><td id="rMask">-</td></tr>
+                <tr><td>网络地址</td><td id="rNetwork">-</td></tr>
+                <tr><td>广播地址</td><td id="rBroadcast">-</td></tr>
+                <tr><td>可用主机范围</td><td id="rRange">-</td></tr>
+                <tr><td>可用主机数</td><td id="rHosts">-</td></tr>
+                <tr><td>CIDR 表示</td><td id="rCidr">-</td></tr>
+                <tr><td>二进制掩码</td><td id="rBinMask">-</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function ipToLong(ip) {
+            const parts = ip.split('.').map(Number);
+            if (parts.length !== 4 || parts.some(n => isNaN(n) || n < 0 || n > 255)) throw new Error('IP 格式错误');
+            return (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3];
+        }
+
+        function longToIp(num) {
+            return [(num >>> 24) & 0xff, (num >>> 16) & 0xff, (num >>> 8) & 0xff, num & 0xff].join('.');
+        }
+
+        function calculate() {
+            const statusEl = document.getElementById('status');
+            try {
+                const ip = document.getElementById('ipInput').value.trim();
+                const prefix = parseInt(document.getElementById('prefixInput').value);
+                const ipLong = ipToLong(ip);
+                const mask = prefix === 0 ? 0 : (-1 << (32 - prefix)) >>> 0;
+                const network = (ipLong & mask) >>> 0;
+                const broadcast = (network | (~mask >>> 0)) >>> 0;
+                const first = (network + 1) >>> 0;
+                const last = (broadcast - 1) >>> 0;
+                const hosts = Math.max(0, broadcast - network - 1);
+
+                document.getElementById('rIp').textContent = ip;
+                document.getElementById('rMask').textContent = longToIp(mask);
+                document.getElementById('rNetwork').textContent = longToIp(network) + ' /' + prefix;
+                document.getElementById('rBroadcast').textContent = longToIp(broadcast);
+                document.getElementById('rRange').textContent = hosts > 0 ? longToIp(first) + ' - ' + longToIp(last) : '-';
+                document.getElementById('rHosts').textContent = hosts.toLocaleString();
+                document.getElementById('rCidr').textContent = ip + '/' + prefix;
+                document.getElementById('rBinMask').textContent = longToIp(mask).split('.').map(o => ('00000000' + parseInt(o).toString(2)).slice(-8)).join('.');
+
+                statusEl.textContent = '计算完成';
+                statusEl.className = 'status status-ok';
+            } catch (e) {
+                statusEl.textContent = '错误：' + e.message;
+                statusEl.className = 'status status-error';
+            }
+        }
+
+        calculate();
+    </script>
+</body>
+</html>

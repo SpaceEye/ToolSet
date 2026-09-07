@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📝 Markdown 预览器</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background-color: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .back-link { display: inline-block; color: #58a6ff; text-decoration: none; margin-bottom: 20px; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 2rem; color: #58a6ff; }
+        .subtitle { text-align: center; color: #8b949e; margin-bottom: 32px; font-size: 0.9rem; }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .card-title { font-size: 1.1rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .pane-label { font-size: 0.85rem; color: #8b949e; margin-bottom: 8px; }
+
+        textarea {
+            width: 100%; min-height: 420px;
+            padding: 14px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            color: #e6edf3; font-size: 0.88rem; font-family: monospace;
+            resize: vertical; line-height: 1.6;
+        }
+        textarea:focus { outline: none; border-color: #58a6ff; }
+
+        /* Preview styles */
+        .preview {
+            min-height: 420px; padding: 20px; background: #0d1117;
+            border: 1px solid #30363d; border-radius: 8px;
+            line-height: 1.7; font-size: 0.95rem; overflow: auto; max-height: 600px;
+        }
+        .preview h1 { font-size: 1.6rem; margin: 16px 0 10px; padding-bottom: 8px; border-bottom: 1px solid #30363d; }
+        .preview h2 { font-size: 1.35rem; margin: 14px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #21262d; }
+        .preview h3 { font-size: 1.15rem; margin: 12px 0 6px; }
+        .preview h4, .preview h5, .preview h6 { font-size: 1rem; margin: 10px 0 6px; }
+        .preview p { margin: 8px 0; }
+        .preview ul, .preview ol { margin: 8px 0 8px 24px; }
+        .preview li { margin: 3px 0; }
+        .preview a { color: #58a6ff; }
+        .preview code {
+            background: #21262d; padding: 2px 6px; border-radius: 4px;
+            font-family: monospace; font-size: 0.85em; color: #a5d6ff;
+        }
+        .preview pre {
+            background: #010409; border: 1px solid #30363d; border-radius: 8px;
+            padding: 14px; margin: 10px 0; overflow: auto;
+        }
+        .preview pre code { background: none; padding: 0; color: #e6edf3; font-size: 0.85rem; }
+        .preview .lang-tag {
+            display: inline-block; font-size: 0.7rem; color: #8b949e;
+            margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .preview blockquote {
+            border-left: 3px solid #58a6ff; padding: 4px 14px; margin: 10px 0;
+            color: #8b949e; background: #161b22; border-radius: 0 6px 6px 0;
+        }
+        .preview hr { border: none; border-top: 1px solid #30363d; margin: 16px 0; }
+        .preview table { border-collapse: collapse; margin: 10px 0; width: 100%; }
+        .preview th, .preview td { border: 1px solid #30363d; padding: 8px 12px; text-align: left; }
+        .preview th { background: #21262d; }
+        .preview img { max-width: 100%; border-radius: 6px; }
+        .preview strong { color: #fff; }
+
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .btn {
+            padding: 9px 18px; border-radius: 6px; cursor: pointer;
+            font-size: 0.88rem; border: 1px solid #30363d; transition: all 0.2s;
+        }
+        .btn-primary { background: #1f6feb; color: white; border-color: #1f6feb; }
+        .btn-primary:hover { background: #3a7bd5; }
+        .btn-secondary { background: #21262d; color: #e6edf3; }
+        .btn-secondary:hover { background: #30363d; }
+        .btn.copied { background: #238636; color: white; border-color: #238636; }
+
+        @media (max-width: 800px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5rem; }
+            .editor-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← 返回工具集</a>
+        <h1>📝 Markdown 预览器</h1>
+        <p class="subtitle">轻量级 Markdown 实时渲染 · 支持标题、列表、表格、代码块、引用</p>
+
+        <div class="card">
+            <div class="card-title">📄 编辑器 / 预览</div>
+            <div class="editor-grid">
+                <div>
+                    <div class="pane-label">Markdown 源码</div>
+                    <textarea id="mdInput" oninput="render()"># 工具集 README
+
+这是一个 **轻量级** Markdown 预览器，支持以下语法：
+
+- 标题（h1 ~ h6）
+- **粗体**、*斜体*、~~删除线~~
+- `行内代码`
+- 有序列表
+    1. 第一项
+    2. 第二项
+- 无序列表
+
+## 代码块示例
+
+```js
+function greet(name) {
+    console.log("你好, " + name);
+}
+greet("世界");
+```
+
+## 表格
+
+| 工具 | 用途 | 状态 |
+|------|------|------|
+| JSON 格式化 | 数据处理 | ✅ |
+| 正则测试 | 文本处理 | ✅ |
+| 哈希生成 | 安全校验 | ✅ |
+
+> 引用：工欲善其事，必先利其器。
+
+[访问工具集主页](index.html)
+
+---
+
+*左侧输入，右侧实时预览*</textarea>
+                </div>
+                <div>
+                    <div class="pane-label">渲染结果</div>
+                    <div class="preview" id="preview"></div>
+                </div>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" id="copyHtmlBtn" onclick="copyHtml(this)">复制 HTML</button>
+                <button class="btn btn-secondary" onclick="loadSample()">载入示例</button>
+                <button class="btn btn-secondary" onclick="clearMd()">清空</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SAMPLE = document.getElementById('mdInput').value;
+
+        function escapeHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // 轻量 Markdown → HTML（纯逻辑，可测试）
+        function renderMarkdown(src) {
+            if (!src || !src.trim()) return '';
+
+            // 1. 提取围栏代码块
+            const codeBlocks = [];
+            src = src.replace(/```(\w*)[^\S\n]*\n?([\s\S]*?)(?:```|$)/g, function(m, lang, code) {
+                codeBlocks.push({ lang: lang || '', code: code.replace(/\n$/, '') });
+                return '\x00CB' + (codeBlocks.length - 1) + '\x00';
+            });
+
+            let html = escapeHtml(src);
+
+            // 2. 保护行内代码
+            const inlines = [];
+            html = html.replace(/`([^`\n]+)`/g, function(m, c) {
+                inlines.push('<code>' + c + '</code>');
+                return '\x00IC' + (inlines.length - 1) + '\x00';
+            });
+
+            // 3. 强调
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+            html = html.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+            html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+
+            // 4. 标题
+            html = html.replace(/^###### (.*)$/gm, '<h6>$1</h6>');
+            html = html.replace(/^##### (.*)$/gm, '<h5>$1</h5>');
+            html = html.replace(/^#### (.*)$/gm, '<h4>$1</h4>');
+            html = html.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+
+            // 5. 分割线
+            html = html.replace(/^\s*([-*_])\s*(?:\1\s*){2,}$/gm, '<hr>');
+
+            // 6. 引用
+            html = html.replace(/(?:^&gt;.*$\n?)+/gm, function(m) {
+                const inner = m.trim().split('\n').map(l => l.replace(/^&gt;\s?/, '')).join('<br>');
+                return '<blockquote>' + inner + '</blockquote>\n';
+            });
+
+            // 7. 图片 & 链接
+            html = html.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, '<img src="$2" alt="$1">');
+            html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+            // 8. 表格
+            html = html.replace(/(?:^\|.*\|\s*$\n?)+/gm, function(table) {
+                const rows = table.trim().split('\n').map(r => r.trim());
+                if (rows.length < 2) return table;
+                const cells = r => r.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+                const isSep = /^\|?[\s:|-]+\|?$/.test(rows[1]) && rows[1].includes('-');
+                const start = isSep ? 2 : 1;
+                let out = '<table><thead><tr>' + cells(rows[0]).map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>';
+                for (let i = start; i < rows.length; i++) {
+                    out += '<tr>' + cells(rows[i]).map(c => '<td>' + c + '</td>').join('') + '</tr>';
+                }
+                return out + '</tbody></table>\n';
+            });
+
+            // 9. 列表
+            html = html.replace(/(?:^[-*] .*$\n?)+/gm, function(m) {
+                const items = m.trim().split('\n').map(l => l.replace(/^[-*] /, ''));
+                return '<ul>' + items.map(i => '<li>' + i + '</li>').join('') + '</ul>\n';
+            });
+            html = html.replace(/(?:^\d+\. .*$\n?)+/gm, function(m) {
+                const items = m.trim().split('\n').map(l => l.replace(/^\d+\. /, ''));
+                return '<ol>' + items.map(i => '<li>' + i + '</li>').join('') + '</ol>\n';
+            });
+
+            // 10. 段落
+            html = html.split(/\n{2,}/).map(function(chunk) {
+                chunk = chunk.trim();
+                if (!chunk) return '';
+                if (/^\x00CB\d+\x00$/.test(chunk)) return chunk;
+                if (/^<(h[1-6]|ul|ol|blockquote|table|hr|pre)/.test(chunk)) return chunk;
+                return '<p>' + chunk.replace(/\n/g, '<br>') + '</p>';
+            }).join('\n');
+
+            // 11. 还原占位符
+            html = html.replace(/\x00IC(\d+)\x00/g, function(m, i) { return inlines[+i]; });
+            html = html.replace(/(<p>)?\x00CB(\d+)\x00(<\/p>)?/g, function(m, p1, i, p2) {
+                const b = codeBlocks[+i];
+                return '<pre>' + (b.lang ? '<span class="lang-tag">' + b.lang + '</span>' : '') +
+                    '<code>' + escapeHtml(b.code) + '</code></pre>';
+            });
+
+            return html;
+        }
+
+        function render() {
+            document.getElementById('preview').innerHTML = renderMarkdown(document.getElementById('mdInput').value);
+        }
+
+        function copyHtml(btn) {
+            const html = document.getElementById('preview').innerHTML;
+            navigator.clipboard.writeText(html).then(function() {
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(function() { btn.textContent = '复制 HTML'; btn.classList.remove('copied'); }, 1500);
+            });
+        }
+
+        function loadSample() {
+            document.getElementById('mdInput').value = SAMPLE;
+            render();
+        }
+
+        function clearMd() {
+            document.getElementById('mdInput').value = '';
+            render();
+        }
+
+        render();
+    </script>
+</body>
+</html>
