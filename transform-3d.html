@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧊 三维变换可视化</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:960px;margin:0 auto}
+.back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
+.back-link:hover{text-decoration:underline}
+h1{margin-bottom:8px;font-size:2rem;color:#58a6ff}
+.subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+.row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.ctrl{flex:1;min-width:170px}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+.val{color:#79c0ff;font-size:.8rem}
+input[type=range]{width:100%;accent-color:#58a6ff}
+select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%}
+.chk{display:flex;align-items:center;gap:8px;color:#e6edf3;font-size:.9rem}
+#cv{background:#0d1117;border:1px solid #30363d;border-radius:8px;width:100%;display:block;cursor:grab;touch-action:none}
+#cv:active{cursor:grabbing}
+.hint{color:#484f58;font-size:.8rem;text-align:center;margin-top:10px}
+.matrix{display:grid;grid-template-columns:repeat(3,84px);gap:6px;font-family:monospace}
+.m-cell{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:8px;text-align:center;color:#7ee787;font-size:.85rem}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+@media(max-width:600px){body{padding:20px}}
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="index.html">← 返回工具集</a>
+<h1>🧊 三维变换可视化</h1>
+<p class="subtitle">绕 X / Y / Z 轴旋转、透视投影、平移缩放 —— 在浏览器里直接拖拽观察</p>
+
+<div class="card">
+<div class="row">
+<div class="ctrl"><label>几何体</label>
+<select id="c_shape">
+<option value="cube">正方体</option>
+<option value="tetra">正四面体</option>
+<option value="octa">正八面体</option>
+</select></div>
+<div class="ctrl"><label>绕 X 轴 <span class="val" id="v_rx"></span></label><input type="range" id="c_rx" min="-180" max="180" step="1" value="20"></div>
+<div class="ctrl"><label>绕 Y 轴 <span class="val" id="v_ry"></span></label><input type="range" id="c_ry" min="-180" max="180" step="1" value="35"></div>
+<div class="ctrl"><label>绕 Z 轴 <span class="val" id="v_rz"></span></label><input type="range" id="c_rz" min="-180" max="180" step="1" value="0"></div>
+</div>
+<div class="row">
+<div class="ctrl"><label>缩放 <span class="val" id="v_zm"></span></label><input type="range" id="c_zm" min="30" max="110" step="1" value="85"></div>
+<div class="ctrl"><label>相机距离 <span class="val" id="v_ds"></span></label><input type="range" id="c_ds" min="3" max="15" step="0.5" value="7"></div>
+<div class="ctrl" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+<label class="chk"><input type="checkbox" id="k_persp" checked> 透视投影</label>
+<label class="chk"><input type="checkbox" id="k_axes" checked> 坐标轴</label>
+<label class="chk"><input type="checkbox" id="k_auto"> 自动旋转</label>
+</div>
+</div>
+</div>
+
+<div class="card">
+<canvas id="cv" width="900" height="560"></canvas>
+<p class="hint">✋ 在画布上按住拖动 = 轨道旋转；切换透视投影对比一下平行投影的差异</p>
+</div>
+
+<div class="card">
+<h2 style="font-size:1.1rem;margin-bottom:12px">当前旋转矩阵 R = Rz · Ry · Rx</h2>
+<div class="matrix" id="mat3"></div>
+</div>
+
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+
+<script>
+var SHAPES = {
+  cube: {
+    v:[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],
+    f:[[0,1,2,3],[7,6,5,4],[4,5,1,0],[2,3,7,6],[1,5,6,2],[0,3,7,4]]
+  },
+  tetra: {
+    v:[[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]],
+    f:[[0,1,2],[0,3,1],[0,2,3],[1,3,2]]
+  },
+  octa: {
+    v:[[1.4,0,0],[-1.4,0,0],[0,1.4,0],[0,-1.4,0],[0,0,1.4],[0,0,-1.4]],
+    f:[[0,2,4],[2,1,4],[1,3,4],[3,0,4],[2,0,5],[1,2,5],[3,1,5],[0,3,5]]
+  }
+};
+var FACE_HUES = [212, 280, 45, 150, 340, 190, 30, 110];
+
+function gid(id){ return document.getElementById(id); }
+function num(id){ return parseFloat(gid(id).value); }
+function deg(v){ return v*Math.PI/180; }
+
+// —— 纯数学函数（可独立测试）——
+function matMul(A,B){
+  var C=[[0,0,0],[0,0,0],[0,0,0]];
+  for(var i=0;i<3;i++)for(var j=0;j<3;j++){
+    C[i][j]=A[i][0]*B[0][j]+A[i][1]*B[1][j]+A[i][2]*B[2][j];
+  }
+  return C;
+}
+function rotM(rx,ry,rz){
+  var cx=Math.cos(rx),sx=Math.sin(rx),cy=Math.cos(ry),sy=Math.sin(ry),cz=Math.cos(rz),sz=Math.sin(rz);
+  var X=[[1,0,0],[0,cx,-sx],[0,sx,cx]];
+  var Y=[[cy,0,sy],[0,1,0],[-sy,0,cy]];
+  var Z=[[cz,-sz,0],[sz,cz,0],[0,0,1]];
+  return matMul(Z, matMul(Y, X));
+}
+function applyM(M,v){
+  return [ M[0][0]*v[0]+M[0][1]*v[1]+M[0][2]*v[2],
+           M[1][0]*v[0]+M[1][1]*v[1]+M[1][2]*v[2],
+           M[2][0]*v[0]+M[2][1]*v[1]+M[2][2]*v[2] ];
+}
+function sub(a,b){ return [a[0]-b[0],a[1]-b[1],a[2]-b[2]]; }
+function cross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+function dot(a,b){ return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]; }
+function norm(a){ var l=Math.sqrt(dot(a,a))||1; return [a[0]/l,a[1]/l,a[2]/l]; }
+function clampAngle(a){ a=((a+180)%360+360)%360-180; return a; }
+
+// 固定旋转顺序：X → Y → Z，组合为 R = Rz·Ry·Rx
+function currentM(){
+  return rotM(deg(num('c_rx')), deg(num('c_ry')), deg(num('c_rz')));
+}
+
+function render(){
+  gid('v_rx').textContent = num('c_rx') + '°';
+  gid('v_ry').textContent = num('c_ry') + '°';
+  gid('v_rz').textContent = num('c_rz') + '°';
+  gid('v_zm').textContent = num('c_zm');
+  gid('v_ds').textContent = num('c_ds');
+
+  var cv = gid('cv'), ctx = cv.getContext('2d');
+  var ox = cv.width/2, oy = cv.height/2;
+  var unit = num('c_zm'), dist = num('c_ds');
+  var persp = gid('k_persp').checked;
+  var M = currentM();
+  var shape = SHAPES[gid('c_shape').value];
+
+  function project(p){
+    var f = 1;
+    if (persp) { var d = Math.max(dist - p[2], 0.5); f = dist / d; }
+    return [ox + p[0]*unit*f, oy - p[1]*unit*f];
+  }
+  function drawPoly(pts, stroke, fill, lw){
+    ctx.beginPath();
+    pts.forEach(function(p,i){ if(i===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); });
+    ctx.closePath();
+    if (fill){ ctx.fillStyle = fill; ctx.fill(); }
+    ctx.strokeStyle = stroke; ctx.lineWidth = lw||1.5; ctx.stroke();
+  }
+
+  ctx.clearRect(0,0,cv.width,cv.height);
+
+  // 坐标轴
+  if (gid('k_axes').checked) {
+    var axes = [
+      {v:[1.7,0,0], c:'#f85149', l:'x'},
+      {v:[0,1.7,0], c:'#7ee787', l:'y'},
+      {v:[0,0,1.7], c:'#79c0ff', l:'z'}
+    ];
+    axes.forEach(function(ax){
+      var p0 = project(applyM(M,[0,0,0])), p1 = project(applyM(M,ax.v));
+      ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]);
+      ctx.strokeStyle = ax.c; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = ax.c; ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(ax.l, p1[0]+6, p1[1]-6);
+    });
+  }
+
+  var rv = shape.v.map(function(v){ return applyM(M, v); });
+  var light = norm([0.4, 0.7, 0.62]);
+  var cam = [0,0,dist];
+
+  var faces = shape.f.map(function(f, idx){
+    var verts = f.map(function(i){ return rv[i]; });
+    var cen = [0,0,0];
+    verts.forEach(function(v){ cen[0]+=v[0]/verts.length; cen[1]+=v[1]/verts.length; cen[2]+=v[2]/verts.length; });
+    var n = norm(cross(sub(verts[1],verts[0]), sub(verts[2],verts[0])));
+    // 自动修正绕向，保证法线朝外
+    if (dot(n, sub(verts[0], cen)) < 0) n = [-n[0],-n[1],-n[2]];
+    var visible = dot(n, sub(cam, cen)) > 0;
+    var shade = 0.35 + 0.65 * Math.max(0, dot(n, light));
+    return { idx:idx, verts:verts, cen:cen, n:n, visible:visible, depth:cen[2], shade:shade };
+  }).filter(function(fc){ return fc.visible; })
+    .sort(function(a,b){ return a.depth - b.depth; }); // painter：远的先画
+
+  faces.forEach(function(fc){
+    var pts = fc.verts.map(project);
+    var hue = FACE_HUES[fc.idx % FACE_HUES.length];
+    var lum = Math.round(28 + 40 * fc.shade);
+    drawPoly(pts, 'rgba(13,17,23,.95)', 'hsl(' + hue + ',65%,' + lum + '%)', 1.5);
+  });
+
+  // 顶点
+  if (!faces.length) {
+    rv.forEach(function(v){
+      var p = project(v);
+      ctx.beginPath(); ctx.arc(p[0],p[1],3,0,Math.PI*2);
+      ctx.fillStyle = '#58a6ff'; ctx.fill();
+    });
+  }
+
+  // 矩阵显示
+  var cells = [];
+  for (var i=0;i<3;i++) for (var j=0;j<3;j++) cells.push(parseFloat(M[i][j].toFixed(2)));
+  gid('mat3').innerHTML = cells.map(function(v){ return '<div class="m-cell">' + v + '</div>'; }).join('');
+}
+
+// —— 拖拽轨道旋转 ——
+var dragging = false, last = null;
+var cvEl = gid('cv');
+cvEl.addEventListener('mousedown', function(e){ dragging = true; last = [e.clientX, e.clientY]; });
+window.addEventListener('mouseup', function(){ dragging = false; });
+window.addEventListener('mousemove', function(e){
+  if (!dragging) return;
+  var dx = e.clientX - last[0], dy = e.clientY - last[1];
+  last = [e.clientX, e.clientY];
+  gid('c_ry').value = clampAngle(num('c_ry') + dx * 0.5);
+  gid('c_rx').value = clampAngle(num('c_rx') + dy * 0.5);
+  render();
+});
+cvEl.addEventListener('touchstart', function(e){ dragging = true; last = [e.touches[0].clientX, e.touches[0].clientY]; }, {passive:true});
+window.addEventListener('touchend', function(){ dragging = false; });
+cvEl.addEventListener('touchmove', function(e){
+  if (!dragging) return;
+  var t = e.touches[0], dx = t.clientX - last[0], dy = t.clientY - last[1];
+  last = [t.clientX, t.clientY];
+  gid('c_ry').value = clampAngle(num('c_ry') + dx * 0.5);
+  gid('c_rx').value = clampAngle(num('c_rx') + dy * 0.5);
+  render();
+}, {passive:true});
+
+['c_shape','c_rx','c_ry','c_rz','c_zm','c_ds','k_persp','k_axes'].forEach(function(id){
+  gid(id).addEventListener('input', render);
+  gid(id).addEventListener('change', render);
+});
+
+// 自动旋转
+(function tick(){
+  if (gid('k_auto').checked) {
+    gid('c_ry').value = clampAngle(num('c_ry') + 0.5);
+    render();
+  }
+  requestAnimationFrame(tick);
+})();
+
+render();
+</script>
+</body>
+</html>

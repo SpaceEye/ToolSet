@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📐 二维变换可视化</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:900px;margin:0 auto}
+.back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
+.back-link:hover{text-decoration:underline}
+h1{margin-bottom:8px;font-size:2rem;color:#58a6ff}
+.subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+.row{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.ctrl{flex:1;min-width:170px}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+.val{color:#79c0ff;font-size:.8rem}
+input[type=range]{width:100%;accent-color:#58a6ff}
+select,input[type=number]{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;transition:all .2s}
+select:focus{outline:none;border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.15)}
+.btn{background:#238636;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:.95rem;cursor:pointer;transition:all .2s}
+.btn:hover{background:#2ea043}
+#cv{background:#0d1117;border:1px solid #30363d;border-radius:8px;width:100%;display:block}
+.matrix{display:grid;grid-template-columns:repeat(3,90px);gap:6px;font-family:monospace}
+.m-cell{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:8px;text-align:center;color:#7ee787;font-size:.9rem}
+.note{color:#8b949e;font-size:.85rem;margin-top:12px;line-height:1.6}
+.legend{display:flex;gap:20px;margin-top:12px;font-size:.85rem;color:#8b949e}
+.legend i{display:inline-block;width:22px;height:0;border-top:3px solid;margin-right:6px;vertical-align:middle}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+@media(max-width:600px){body{padding:20px}}
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="index.html">← 返回工具集</a>
+<h1>📐 二维变换可视化</h1>
+<p class="subtitle">旋转 · 缩放 · 错切 · 平移 —— 实时观察仿射变换对图形的影响</p>
+
+<div class="card">
+<div class="row">
+<div class="ctrl"><label>图形</label>
+<select id="c_shape">
+<option value="F">字母 F（判断左右手系）</option>
+<option value="triangle">三角形</option>
+<option value="square">正方形</option>
+<option value="arrow">箭头</option>
+</select></div>
+<div class="ctrl"><label>旋转角 <span class="val" id="v_rot"></span></label><input type="range" id="c_rot" min="-180" max="180" step="1" value="25"></div>
+<div class="ctrl"><label>缩放 X <span class="val" id="v_sx"></span></label><input type="range" id="c_sx" min="0.2" max="2" step="0.05" value="1"></div>
+</div>
+<div class="row">
+<div class="ctrl"><label>缩放 Y <span class="val" id="v_sy"></span></label><input type="range" id="c_sy" min="0.2" max="2" step="0.05" value="1"></div>
+<div class="ctrl"><label>错切 X <span class="val" id="v_shx"></span></label><input type="range" id="c_shx" min="-1" max="1" step="0.05" value="0"></div>
+<div class="ctrl"><label>错切 Y <span class="val" id="v_shy"></span></label><input type="range" id="c_shy" min="-1" max="1" step="0.05" value="0"></div>
+</div>
+<div class="row">
+<div class="ctrl"><label>平移 X <span class="val" id="v_tx"></span></label><input type="range" id="c_tx" min="-4" max="4" step="0.1" value="0"></div>
+<div class="ctrl"><label>平移 Y <span class="val" id="v_ty"></span></label><input type="range" id="c_ty" min="-4" max="4" step="0.1" value="0"></div>
+<div class="ctrl" style="display:flex;align-items:flex-end"><button class="btn" onclick="resetAll()">重置</button></div>
+</div>
+</div>
+
+<div class="card">
+<canvas id="cv" width="820" height="520"></canvas>
+<div class="legend"><span><i style="border-color:#484f58;border-top-style:dashed"></i>原始图形</span><span><i style="border-color:#58a6ff"></i>变换后图形</span></div>
+</div>
+
+<div class="card">
+<h2 style="font-size:1.1rem;margin-bottom:12px">当前变换矩阵（齐次坐标 3×3）</h2>
+<div class="matrix" id="mat"></div>
+<p class="note">组合顺序：M = Translate · Rotate · Scale · Shear。<br>
+行列式 det(M) = a·d − b·c：<b>det &lt; 0</b> 表示发生镜像（左手系）；<b>|det| = 面积放大倍数</b>。当前 det = <span id="detVal" style="color:#7ee787">—</span></p>
+</div>
+
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+
+<script>
+var SHAPES = {
+  'F': {strokes:[[[0,-1.5],[0,1.5]],[[0,1.5],[2.5,1.5]],[[0,0.2],[1.9,0.2]]]},
+  'triangle': {polys:[[[-1.2,-0.9],[1.2,-0.9],[0,1.4]]]},
+  'square': {polys:[[[-1,-1],[1,-1],[1,1],[-1,1]]]},
+  'arrow': {strokes:[[[-1.6,0],[1.4,0]],[[0.6,0.7],[1.4,0],[0.6,-0.7]]]}
+};
+var UNIT = 52;
+
+function gid(id){ return document.getElementById(id); }
+function num(id){ return parseFloat(gid(id).value); }
+
+function readState(){
+  return { shape: gid('c_shape').value,
+    rot:num('c_rot'), sx:num('c_sx'), sy:num('c_sy'),
+    shx:num('c_shx'), shy:num('c_shy'), tx:num('c_tx'), ty:num('c_ty') };
+}
+// 纯函数：由参数生成线性部分 + 平移（可独立测试）
+function computeMatrix(s){
+  var r = s.rot*Math.PI/180, c = Math.cos(r), sn = Math.sin(r);
+  function lin(x,y){
+    var x1 = x + s.shx*y, y1 = y + s.shy*x;
+    var x2 = x1*s.sx, y2 = y1*s.sy;
+    return [c*x2 - sn*y2, sn*x2 + c*y2];
+  }
+  var a = lin(1,0), b = lin(0,1);
+  return { a:a[0], c:a[1], b:b[0], d:b[1], tx:s.tx, ty:s.ty };
+}
+function applyPoint(m,x,y){ return [m.a*x + m.b*y + m.tx, m.c*x + m.d*y + m.ty]; }
+
+function render(){
+  var s = readState(), m = computeMatrix(s);
+  gid('v_rot').textContent = s.rot + '°';
+  gid('v_sx').textContent = s.sx.toFixed(2);
+  gid('v_sy').textContent = s.sy.toFixed(2);
+  gid('v_shx').textContent = s.shx.toFixed(2);
+  gid('v_shy').textContent = s.shy.toFixed(2);
+  gid('v_tx').textContent = s.tx.toFixed(1);
+  gid('v_ty').textContent = s.ty.toFixed(1);
+
+  var cv = gid('cv'), ctx = cv.getContext('2d');
+  var ox = cv.width/2, oy = cv.height/2;
+  function W2S(p){ return [ox + p[0]*UNIT, oy - p[1]*UNIT]; }
+
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // 网格
+  ctx.strokeStyle = '#21262d'; ctx.lineWidth = 1;
+  for (var gx = ox % UNIT; gx < cv.width; gx += UNIT) { ctx.beginPath(); ctx.moveTo(gx,0); ctx.lineTo(gx,cv.height); ctx.stroke(); }
+  for (var gy = oy % UNIT; gy < cv.height; gy += UNIT) { ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(cv.width,gy); ctx.stroke(); }
+  // 坐标轴
+  ctx.strokeStyle = '#484f58'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0,oy); ctx.lineTo(cv.width,oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox,0); ctx.lineTo(ox,cv.height); ctx.stroke();
+  ctx.fillStyle = '#8b949e'; ctx.font = '14px sans-serif';
+  ctx.fillText('x', cv.width-14, oy-8); ctx.fillText('y', ox+8, 14);
+  // 原点
+  ctx.fillStyle = '#484f58'; ctx.beginPath(); ctx.arc(ox,oy,3,0,Math.PI*2); ctx.fill();
+
+  var shape = SHAPES[s.shape];
+  function drawGeom(useMatrix, stroke, dash, fill){
+    ctx.save();
+    ctx.strokeStyle = stroke; ctx.lineWidth = 2.5; ctx.setLineDash(dash||[]);
+    ctx.fillStyle = fill || 'transparent';
+    var pol = function(pts){
+      ctx.beginPath();
+      pts.forEach(function(p,i){
+        var q = useMatrix ? applyPoint(m,p[0],p[1]) : p;
+        var sp = W2S(q);
+        if (i===0) ctx.moveTo(sp[0],sp[1]); else ctx.lineTo(sp[0],sp[1]);
+      });
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    };
+    (shape.polys||[]).forEach(pol);
+    (shape.strokes||[]).forEach(function(st){
+      ctx.beginPath();
+      st.forEach(function(p,i){
+        var q = useMatrix ? applyPoint(m,p[0],p[1]) : p;
+        var sp = W2S(q);
+        if (i===0) ctx.moveTo(sp[0],sp[1]); else ctx.lineTo(sp[0],sp[1]);
+      });
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+  drawGeom(false, '#484f58', [6,5]);
+  drawGeom(true, '#58a6ff', [], 'rgba(88,166,255,.12)');
+
+  // 矩阵显示
+  var cells = [m.a, m.b, m.tx, m.c, m.d, m.ty, 0, 0, 1];
+  gid('mat').innerHTML = cells.map(function(v){
+    return '<div class="m-cell">' + (v===0?'0':parseFloat(v.toFixed(3))) + '</div>';
+  }).join('');
+  var det = m.a*m.d - m.b*m.c;
+  gid('detVal').textContent = parseFloat(det.toFixed(4)) + (det < 0 ? '（镜像！）' : '');
+}
+
+function resetAll(){
+  gid('c_rot').value=25; gid('c_sx').value=1; gid('c_sy').value=1;
+  gid('c_shx').value=0; gid('c_shy').value=0; gid('c_tx').value=0; gid('c_ty').value=0;
+  render();
+}
+
+['c_shape','c_rot','c_sx','c_sy','c_shx','c_shy','c_tx','c_ty'].forEach(function(id){
+  gid(id).addEventListener('input', render);
+});
+render();
+</script>
+</body>
+</html>

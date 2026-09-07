@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>➡️ 空间向量计算器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:900px;margin:0 auto}
+.back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
+.back-link:hover{text-decoration:underline}
+h1{margin-bottom:8px;font-size:2rem;color:#58a6ff}
+.subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+h2{font-size:1.05rem;margin-bottom:16px;color:#e6edf3}
+.row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+input,select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;transition:all .2s}
+input:focus,select:focus{outline:none;border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.15)}
+.field{flex:1;min-width:90px}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:16px}
+.result-item{background:#0d1117;border-radius:8px;padding:16px;text-align:center}
+.result-item .val{font-size:1.25rem;font-weight:bold;color:#7ee787;margin:8px 0;word-break:break-all;font-family:monospace}
+.result-item .lbl{color:#8b949e;font-size:.8rem}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+@media(max-width:600px){body{padding:20px}}
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="index.html">← 返回工具集</a>
+<h1>➡️ 空间向量计算器</h1>
+<p class="subtitle">二维 / 三维向量的加减、点积、叉积、模长与夹角</p>
+
+<div class="card">
+<div class="row">
+<div class="field" style="max-width:160px"><label>维度</label>
+<select id="c_dim"><option value="3">3D 向量</option><option value="2">2D 向量</option></select></div>
+</div>
+<div class="row">
+<div style="flex:1;min-width:260px"><label>向量 A</label></div>
+</div>
+<div class="row">
+<div class="field"><label>Ax</label><input type="number" id="a0" value="1" step="any"></div>
+<div class="field"><label>Ay</label><input type="number" id="a1" value="2" step="any"></div>
+<div class="field" id="fA2"><label>Az</label><input type="number" id="a2" value="3" step="any"></div>
+</div>
+<div class="row">
+<div style="flex:1;min-width:260px"><label>向量 B</label></div>
+</div>
+<div class="row">
+<div class="field"><label>Bx</label><input type="number" id="b0" value="4" step="any"></div>
+<div class="field"><label>By</label><input type="number" id="b1" value="-5" step="any"></div>
+<div class="field" id="fB2"><label>Bz</label><input type="number" id="b2" value="6" step="any"></div>
+</div>
+</div>
+
+<div class="card">
+<h2>计算结果</h2>
+<div class="result-grid" id="out"></div>
+</div>
+
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+
+<script>
+function gid(id){ return document.getElementById(id); }
+function num(id){ return parseFloat(gid(id).value); }
+function rd(n){ return parseFloat(n.toFixed(4)); }
+function vs(v){ return '(' + v.map(rd).join(', ') + ')'; }
+
+// 纯函数（可独立测试）
+function vlen(v){ return Math.sqrt(v.reduce(function(s,x){return s+x*x;},0)); }
+function vdot(a,b){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+function vcross(a,b){
+  return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+}
+function vangle(a,b){
+  var c = vdot(a,b) / (vlen(a)*vlen(b));
+  c = Math.min(1, Math.max(-1, c));
+  return Math.acos(c) * 180 / Math.PI;
+}
+
+function calc(){
+  var dim = parseInt(gid('c_dim').value);
+  gid('fA2').style.display = dim===3 ? '' : 'none';
+  gid('fB2').style.display = dim===3 ? '' : 'none';
+  var A = [], B = [];
+  for (var i=0;i<dim;i++){ A.push(num('a'+i)); B.push(num('b'+i)); }
+  var ok = A.every(isFinite) && B.every(isFinite);
+  var out = gid('out');
+  if (!ok) { out.innerHTML = '<p style="color:#f85149">请输入有效数字</p>'; return; }
+
+  var items = [];
+  function add(l, v){ items.push('<div class="result-item"><div class="lbl">'+l+'</div><div class="val">'+v+'</div></div>'); }
+
+  var la = vlen(A), lb = vlen(B);
+  add('|A| 模长', rd(la));
+  add('|B| 模长', rd(lb));
+  add('A + B', vs(A.map(function(x,i){ return x + B[i]; })));
+  add('A − B', vs(A.map(function(x,i){ return x - B[i]; })));
+  add('A · B 点积', rd(vdot(A,B)));
+  if (dim===3) {
+    add('A × B 叉积', vs(vcross(A,B)));
+    var c = vcross(A,B);
+    add('|A × B|', rd(vlen(c)));
+  } else {
+    add('A × B（z 分量）', rd(A[0]*B[1] - A[1]*B[0]));
+  }
+  add('夹角 θ', (la && lb) ? rd(vangle(A,B)) + '°' : '—');
+  add('Â 单位向量', la ? vs(A.map(function(x){ return x/la; })) : '—');
+  add('B̂ 单位向量', lb ? vs(B.map(function(x){ return x/lb; })) : '—');
+  // 垂直判定：点积=0 共线判定：叉积=0
+  var verdict = '—';
+  if (vdot(A,B) === 0 && la && lb) verdict = 'A ⊥ B 互相垂直';
+  else if (dim===3 && vlen(vcross(A,B)) < 1e-9 && la && lb) verdict = 'A ∥ B 共线';
+  else if (dim===2 && Math.abs(A[0]*B[1]-A[1]*B[0]) < 1e-9 && la && lb) verdict = 'A ∥ B 共线';
+  add('位置关系', '<span style="font-size:1rem">' + verdict + '</span>');
+
+  out.innerHTML = items.join('');
+}
+
+['a0','a1','a2','b0','b1','b2','c_dim'].forEach(function(id){
+  gid(id).addEventListener('input', calc);
+});
+calc();
+</script>
+</body>
+</html>

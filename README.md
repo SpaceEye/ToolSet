@@ -61,6 +61,15 @@
 | [CSV/表格转换器](csv-converter.html) | CSV、JSON、表格互转 |
 | [单位换算器](unit-converter.html) | 长度/重量/温度/数据等多单位换算 |
 
+### 📐 数学与几何工具
+
+| 工具 | 描述 |
+|------|------|
+| [二维变换可视化](transform-2d.html) | 旋转/缩放/错切/平移实时可视化 + 变换矩阵 |
+| [三维变换可视化](transform-3d.html) | 3D 旋转、透视投影、拖拽轨道观察 |
+| [空间向量计算器](vector-calculator.html) | 点积/叉积/模长/夹角/垂直共线判定 |
+| [几何计算器](geometry-calculator.html) | 16 种平面/立体图形面积体积公式计算 |
+
 ### 🎮 游戏工具箱
 
 | 工具 | 描述 |
@@ -95,6 +104,7 @@ ToolsSet/
 ├── css-units.html              # CSS 单位转换器
 ├── csv-converter.html          # CSV/表格转换器
 ├── diff-compare.html           # 文本对比工具
+├── geometry-calculator.html    # 几何计算器（面积/体积）
 ├── gaming-tools.html           # 游戏小工具（骰子/轮盘等）
 ├── gradient-generator.html     # 渐变生成器
 ├── hash-generator.html         # 哈希生成器
@@ -114,11 +124,14 @@ ToolsSet/
 ├── regex-tester.html           # 正则表达式测试器
 ├── tier-list-editor.html       # T 级排行榜编辑器
 ├── timestamp-converter.html    # 时间戳转换器
+├── transform-2d.html           # 二维变换可视化
+├── transform-3d.html           # 三维变换可视化
 ├── unit-converter.html         # 单位换算器
 ├── url-encoder.html            # URL 编解码器
 ├── valorant-economy.html       # Valorant 经济计算器
 ├── valorant-penetration.html   # Valorant 跨射伤量分析
 ├── uuid-generator.html         # UUID 生成器
+├── vector-calculator.html      # 空间向量计算器
 ├── hex-converter.py            # 命令行进制转换小工具（独立脚本）
 ├── .gitignore
 └── README.md                   # 本说明文档

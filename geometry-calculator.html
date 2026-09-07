@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔺 几何计算器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:40px}
+.container{max-width:900px;margin:0 auto}
+.back-link{display:inline-block;color:#58a6ff;text-decoration:none;margin-bottom:20px;font-size:.9rem}
+.back-link:hover{text-decoration:underline}
+h1{margin-bottom:8px;font-size:2rem;color:#58a6ff}
+.subtitle{color:#8b949e;margin-bottom:32px;font-size:.95rem}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px}
+.row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end}
+label{display:block;color:#8b949e;margin-bottom:4px;font-size:.85rem}
+input,select{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 14px;color:#e6edf3;font-size:.95rem;width:100%;transition:all .2s}
+input:focus,select:focus{outline:none;border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.15)}
+.field{flex:1;min-width:120px}
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:#21262d;padding:4px;border-radius:8px;width:fit-content}
+.tab-btn{padding:8px 20px;border-radius:6px;background:transparent;border:none;color:#8b949e;font-size:.9rem;cursor:pointer;transition:all .2s}
+.tab-btn.active{background:#1f6feb;color:#fff}
+.result-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px}
+.result-item{background:#0d1117;border-radius:8px;padding:16px;text-align:center}
+.result-item .val{font-size:1.5rem;font-weight:bold;color:#7ee787;margin:8px 0;word-break:break-all}
+.result-item .lbl{color:#8b949e;font-size:.8rem}
+.err{color:#f85149}
+.formula{color:#8b949e;font-size:.8rem;margin-top:14px;font-family:monospace;background:#0d1117;padding:10px 14px;border-radius:8px;line-height:1.8}
+.footer{text-align:center;margin-top:48px;color:#484f58;font-size:.8rem}
+@media(max-width:600px){body{padding:20px}}
+</style>
+</head>
+<body>
+<div class="container">
+<a class="back-link" href="index.html">← 返回工具集</a>
+<h1>🔺 几何计算器</h1>
+<p class="subtitle">2D 图形的面积与周长 · 3D 立体的表面积与体积 · 附公式</p>
+
+<div class="card">
+<div class="tabs">
+<button class="tab-btn active" id="t2" onclick="setDim(2)">📄 平面图形</button>
+<button class="tab-btn" id="t3" onclick="setDim(3)">📦 立体图形</button>
+</div>
+<div class="row">
+<div class="field" style="max-width:260px"><label>图形</label><select id="c_shape" onchange="buildFields()"></select></div>
+</div>
+<div class="row" id="fields"></div>
+</div>
+
+<div class="card">
+<h2 style="font-size:1.05rem;margin-bottom:8px">计算结果</h2>
+<div class="result-grid" id="out"></div>
+<div class="formula" id="frm" style="display:none"></div>
+</div>
+
+<div class="footer">© 2026 SpacePioneer · 保留所有权利</div>
+</div>
+
+<script>
+var S = Math.sqrt, P = Math.PI;
+var FORMS = {
+  circle:  {dim:2, name:'圆形', fields:[['r','半径 r','5']],
+    calc:function(v){ return {'面积':P*v.r*v.r, '周长':2*P*v.r, '直径':2*v.r}; },
+    f:'A = πr² · C = 2πr'},
+  square:  {dim:2, name:'正方形', fields:[['a','边长 a','4']],
+    calc:function(v){ return {'面积':v.a*v.a, '周长':4*v.a, '对角线':S(2)*v.a}; },
+    f:'A = a² · C = 4a · d = a√2'},
+  rect:    {dim:2, name:'长方形', fields:[['w','宽 w','3'],['h','高 h','5']],
+    calc:function(v){ return {'面积':v.w*v.h, '周长':2*(v.w+v.h), '对角线':S(v.w*v.w+v.h*v.h)}; },
+    f:'A = w·h · C = 2(w+h) · d = √(w²+h²)'},
+  triEq:   {dim:2, name:'等边三角形', fields:[['a','边长 a','4']],
+    calc:function(v){ return {'面积':S(3)/4*v.a*v.a, '周长':3*v.a, '高':S(3)/2*v.a}; },
+    f:'A = (√3/4)a² · h = (√3/2)a'},
+  triGen:  {dim:2, name:'任意三角形（三边）', fields:[['a','边 a','3'],['b','边 b','4'],['c','边 c','5']],
+    calc:function(v){
+      var s=(v.a+v.b+v.c)/2, k=s*(s-v.a)*(s-v.b)*(s-v.c);
+      if (k<=0) return null;
+      return {'面积':S(k), '周长':2*s, '半周长':s};
+    },
+    f:'海伦公式：A = √[s(s−a)(s−b)(s−c)]，s 为半周长'},
+  regPoly: {dim:2, name:'正多边形', fields:[['n','边数 n','6'],['s','边长 s','3']],
+    calc:function(v){
+      if (v.n < 3) return null;
+      return {'面积':v.n*v.s*v.s/(4*Math.tan(P/v.n)), '周长':v.n*v.s, '内角和':(v.n-2)*180};
+    },
+    f:'A = n·s² / (4·tan(π/n))'},
+  trap:    {dim:2, name:'等腰梯形', fields:[['a','上底 a','3'],['b','下底 b','7'],['h','高 h','4']],
+    calc:function(v){
+      if (v.a<0||v.b<0||v.h<=0) return null;
+      var leg = S(v.h*v.h + Math.pow((v.b-v.a)/2,2));
+      return {'面积':(v.a+v.b)*v.h/2, '周长':v.a+v.b+2*leg, '腰长':leg};
+    },
+    f:'A = (a+b)·h/2 · 腰 = √[h²+((b−a)/2)²]'},
+  ellipse: {dim:2, name:'椭圆', fields:[['A','长半轴 a','5'],['B','短半轴 b','3']],
+    calc:function(v){
+      return {'面积':P*v.A*v.B, '周长(Ramanujan)':P*(3*(v.A+v.B)-S((3*v.A+v.B)*(v.A+3*v.B)))};
+    },
+    f:'A = πab · 周长用 Ramanujan 近似'},
+
+  sphere:  {dim:3, name:'球体', fields:[['r','半径 r','5']],
+    calc:function(v){ return {'体积':4/3*P*v.r*v.r*v.r, '表面积':4*P*v.r*v.r, '大圆周长':2*P*v.r}; },
+    f:'V = 4πr³/3 · S = 4πr²'},
+  cube:    {dim:3, name:'正方体', fields:[['a','棱长 a','3']],
+    calc:function(v){ return {'体积':v.a*v.a*v.a, '表面积':6*v.a*v.a, '体对角线':S(3)*v.a}; },
+    f:'V = a³ · S = 6a² · d = a√3'},
+  cuboid:  {dim:3, name:'长方体', fields:[['w','宽 w','2'],['h','高 h','3'],['d','长 d','4']],
+    calc:function(v){ return {'体积':v.w*v.h*v.d, '表面积':2*(v.w*v.h+v.h*v.d+v.d*v.w), '体对角线':S(v.w*v.w+v.h*v.h+v.d*v.d)}; },
+    f:'V = whd · S = 2(wh+hd+dw)'},
+  cyl:     {dim:3, name:'圆柱', fields:[['r','半径 r','3'],['h','高 h','5']],
+    calc:function(v){ return {'体积':P*v.r*v.r*v.h, '表面积':2*P*v.r*(v.r+v.h), '侧面积':2*P*v.r*v.h}; },
+    f:'V = πr²h · S = 2πr(r+h)'},
+  cone:    {dim:3, name:'圆锥', fields:[['r','半径 r','3'],['h','高 h','4']],
+    calc:function(v){
+      var l = S(v.r*v.r+v.h*v.h);
+      return {'体积':P*v.r*v.r*v.h/3, '表面积':P*v.r*l+P*v.r*v.r, '母线 l':l};
+    },
+    f:'l = √(r²+h²) · V = πr²h/3 · S = πrl + πr²'},
+  frustum: {dim:3, name:'圆台', fields:[['R','下底半径 R','4'],['r','上底半径 r','2'],['h','高 h','3']],
+    calc:function(v){
+      var l = S(v.h*v.h + (v.R-v.r)*(v.R-v.r));
+      return {'体积':P*v.h/3*(v.R*v.R+v.R*v.r+v.r*v.r), '表面积':P*l*(v.R+v.r)+P*(v.R*v.R+v.r*v.r), '母线 l':l};
+    },
+    f:'V = πh(R²+Rr+r²)/3 · S = πl(R+r) + πR² + πr²'},
+  tetra:   {dim:3, name:'正四面体', fields:[['a','棱长 a','4']],
+    calc:function(v){ return {'体积':S(2)/12*Math.pow(v.a,3), '表面积':S(3)*v.a*v.a, '高':S(2/3)*v.a}; },
+    f:'V = (√2/12)a³ · S = √3·a²'},
+  torus:   {dim:3, name:'环面（轮胎形）', fields:[['R','管中心半径 R','5'],['r','管半径 r','2']],
+    calc:function(v){
+      if (v.r >= v.R) return null;
+      return {'体积':2*P*P*v.R*v.r*v.r, '表面积':4*P*P*v.R*v.r};
+    },
+    f:'V = 2π²Rr² · S = 4π²Rr'}
+};
+
+var curDim = 2;
+
+function gid(id){ return document.getElementById(id); }
+
+function setDim(d){
+  curDim = d;
+  gid('t2').classList.toggle('active', d===2);
+  gid('t3').classList.toggle('active', d===3);
+  buildShapeList();
+}
+function buildShapeList(){
+  var sel = gid('c_shape');
+  sel.innerHTML = Object.keys(FORMS).filter(function(k){ return FORMS[k].dim===curDim; })
+    .map(function(k){ return '<option value="'+k+'">'+FORMS[k].name+'</option>'; }).join('');
+  buildFields();
+}
+function buildFields(){
+  var f = FORMS[gid('c_shape').value];
+  gid('fields').innerHTML = f.fields.map(function(fl){
+    return '<div class="field"><label>'+fl[1]+'</label><input type="number" id="i_'+fl[0]+'" value="'+fl[2]+'" step="any" oninput="calc()"></div>';
+  }).join('');
+  calc();
+}
+function rd(n){ return parseFloat(n.toFixed(4)); }
+
+function calc(){
+  var f = FORMS[gid('c_shape').value];
+  var vals = {}, bad = false;
+  f.fields.forEach(function(fl){
+    var v = parseFloat(gid('i_'+fl[0]).value);
+    if (!isFinite(v) || v <= 0) bad = true;
+    vals[fl[0]] = v;
+  });
+  var out = gid('out'), frm = gid('frm');
+  if (bad) { out.innerHTML = '<p class="err">所有参数需为正数</p>'; frm.style.display='none'; return; }
+  var res = f.calc(vals);
+  if (!res) { out.innerHTML = '<p class="err">参数不合法（无法构成该图形）</p>'; frm.style.display='none'; return; }
+  out.innerHTML = Object.keys(res).map(function(k){
+    return '<div class="result-item"><div class="lbl">'+k+'</div><div class="val">'+rd(res[k])+'</div></div>';
+  }).join('');
+  frm.style.display = '';
+  frm.textContent = '公式：' + f.f;
+}
+
+buildShapeList();
+</script>
+</body>
+</html>
